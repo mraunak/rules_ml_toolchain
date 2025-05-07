@@ -1,0 +1,116 @@
+build --incompatible_enable_cc_toolchain_resolution     # Only for bazel 6.5: C++ rules use platforms to select toolchains when you set this
+build --toolchain_resolution_debug=.*
+build --cxxopt=-std=c++17
+build --repo_env USE_HERMETIC_CC_TOOLCHAIN=1
+
+build:clang_local --noincompatible_enable_cc_toolchain_resolution
+build:clang_local --@rules_ml_toolchains//cc_toolchain/config:enable_hermetic_cc=False
+build:clang_local --repo_env USE_HERMETIC_CC_TOOLCHAIN=0
+
+# Disable clang extention that rejects type definitions within offsetof.
+# This was added in clang-16 by https://reviews.llvm.org/D133574.
+# Can be removed once upb is updated, since a type definition is used within
+# offset of in the current version of ubp.
+# See https://github.com/protocolbuffers/upb/blob/9effcbcb27f0a665f9f345030188c0b291e32482/upb/upb.c#L183.
+build:clang --copt=-Wno-gnu-offsetof-extensions
+
+# Disable clang extention that rejects unknown arguments.
+build:clang --copt=-Qunused-arguments
+
+# Error on struct/class mismatches, since this causes link failures on Windows.
+build:clang --copt=-Werror=mismatched-tags
+
+# Configs for CUDA
+build:cuda --repo_env TF_NEED_CUDA=1
+build:cuda --repo_env TF_NCCL_USE_STUB=1
+# "sm" means we emit only cubin, which is forward compatible within a GPU generation.
+# "compute" means we emit both cubin and PTX, which is larger but also forward compatible to future GPU generations.
+build:cuda --repo_env HERMETIC_CUDA_COMPUTE_CAPABILITIES="sm_50,sm_60,sm_70,sm_80,compute_90"
+build:cuda --@local_config_cuda//:enable_cuda
+
+# Default hermetic CUDA and CUDNN versions.
+build:cuda --repo_env=HERMETIC_CUDA_VERSION="12.3.2"
+build:cuda --repo_env=HERMETIC_CUDNN_VERSION="9.1.1"
+build:cuda --@local_config_cuda//cuda:include_cuda_libs=true
+
+# This config is used for building targets with CUDA libraries from stubs.
+build:cuda_libraries_from_stubs --@local_config_cuda//cuda:include_cuda_libs=false
+
+# Force the linker to set RPATH, not RUNPATH. When resolving dynamic libraries,
+# ld.so prefers in order: RPATH, LD_LIBRARY_PATH, RUNPATH. JAX sets RPATH to
+# point to the $ORIGIN-relative location of the pip-installed NVIDIA CUDA
+# packages.
+# This has pros and cons:
+# * pro: we'll ignore other CUDA installations, which has frequently confused
+#   users in the past. By setting RPATH, we'll always use the NVIDIA pip
+#   packages if they are installed.
+# * con: the user cannot override the CUDA installation location
+#   via LD_LIBRARY_PATH, if the nvidia-... pip packages are installed. This is
+#   acceptable, because the workaround is "remove the nvidia-..." pip packages.
+# The list of CUDA pip packages that JAX depends on are present in setup.py.
+build:cuda --platforms=//cc_toolchain/config:linux_x86_64_cuda
+build:cuda --linkopt=-Wl,--disable-new-dtags
+
+build:cuda_clang_local --config=cuda
+build:cuda_clang_local --config=clang_local
+build:cuda_clang_local --crosstool_top=@local_config_cuda//crosstool:toolchain
+
+# Build CUDA and other C++ targets with Clang
+build:build_cuda_with_clang --@local_config_cuda//:cuda_compiler=clang
+
+# Build CUDA with NVCC and other C++ targets with Clang
+build:build_cuda_with_nvcc --action_env=TF_NVCC_CLANG="1"
+build:build_cuda_with_nvcc --@local_config_cuda//:cuda_compiler=nvcc
+
+# #############################################################################
+# Feature-specific configurations. These are used by the CI configs below
+# depending on the type of build. E.g. `ci_linux_x86_64` inherits the Linux x86
+# configs such as `avx_linux` and `mkl_open_source_only`, `ci_linux_x86_64_cuda`
+# inherits `cuda` and `build_cuda_with_nvcc`, etc.
+# #############################################################################
+build:nonccl --define=no_nccl_support=true
+
+build:posix --copt=-fvisibility=hidden
+build:posix --copt=-Wno-sign-compare
+build:posix --cxxopt=-std=c++17
+build:posix --host_cxxopt=-std=c++17
+
+build:avx_posix --copt=-mavx
+build:avx_posix --host_copt=-mavx
+
+build:native_arch_posix --copt=-march=native
+build:native_arch_posix --host_copt=-march=native
+
+build:avx_linux --copt=-mavx
+build:avx_linux --host_copt=-mavx
+
+build:avx_windows --copt=/arch:AVX
+
+build:mkl_open_source_only --define=tensorflow_mkldnn_contraction_kernel=1
+
+# Config setting to build oneDNN with Compute Library for the Arm Architecture (ACL).
+build:mkl_aarch64_threadpool --define=build_with_mkl_aarch64=true
+build:mkl_aarch64_threadpool --@compute_library//:openmp=false
+build:mkl_aarch64_threadpool -c opt
+
+# #############################################################################
+# CI Build config options below.
+# JAX uses these configs in CI builds for building artifacts and when running
+# Bazel tests.
+# #############################################################################
+# Linux x86 CI configs
+build:ci_linux_x86_64 --config=avx_linux --config=avx_posix
+build:ci_linux_x86_64 --config=mkl_open_source_only
+build:ci_linux_x86_64 --config=clang --verbose_failures=true
+build:ci_linux_x86_64 --color=yes
+
+# TODO(b/356695103): We do not have a CPU only toolchain so we use the CUDA
+# toolchain for both CPU and GPU builds.
+build:ci_linux_x86_64_clang --config=ci_linux_x86_64
+
+# The toolchain in `--config=cuda` needs to be read before the toolchain in
+# `--config=ci_linux_x86_64`. Otherwise, we run into issues with manylinux
+# compliance.
+build:ci_linux_x86_64_cuda --config=cuda --config=build_cuda_with_nvcc
+build:ci_linux_x86_64_cuda --config=ci_linux_x86_64
+

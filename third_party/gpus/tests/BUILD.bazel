@@ -1,0 +1,76 @@
+load("@local_config_cuda//cuda:build_defs.bzl", "cuda_cc_test", "cuda_default_copts", "cuda_library")
+
+cc_binary(
+    name = "hello_world",
+    srcs = [
+        "hello_world.cc",
+    ],
+)
+
+cuda_library(
+    name = "vector_cuda",
+    srcs = ["vector_cuda.cu.cc"],
+    hdrs = ["vector_cuda.cu.h"],
+    tags = ["cuda-only"],
+)
+
+cc_binary(
+    name = "vector_cuda_binary",
+    srcs = [
+        "vector_cuda_binary.cc",
+    ],
+    copts = [
+        "-x",
+        "cuda",
+        "-DGOOGLE_CUDA=1",
+        "--no-cuda-include-ptx=all",
+        "--cuda-gpu-arch=sm_50",
+        "--cuda-gpu-arch=sm_60",
+        "--cuda-gpu-arch=sm_70",
+        "--cuda-gpu-arch=sm_80",
+        "--cuda-include-ptx=sm_90",
+        "--cuda-gpu-arch=sm_90",
+        "-Xcuda-fatbinary",
+        "--compress-all",
+    ],
+    tags = [
+        "cuda-only",
+        "gpu",
+    ],
+    deps = [
+        ":vector_cuda",
+        "@cuda_cudart//:cudart",
+        "@local_config_cuda//cuda:implicit_cuda_headers_dependency",
+    ],
+)
+
+cuda_cc_test(
+    name = "vector_cuda_test",
+    srcs = [
+        "vector_cuda_test.cc",
+    ],
+    copts = [
+        "-x",
+        "cuda",
+        "-DGOOGLE_CUDA=1",
+        "--no-cuda-include-ptx=all",
+        "--cuda-gpu-arch=sm_50",
+        "--cuda-gpu-arch=sm_60",
+        "--cuda-gpu-arch=sm_70",
+        "--cuda-gpu-arch=sm_80",
+        "--cuda-include-ptx=sm_90",
+        "--cuda-gpu-arch=sm_90",
+        "-Xcuda-fatbinary",
+        "--compress-all",
+    ],
+    tags = [
+        "cuda-only",
+        "gpu",
+    ],
+    deps = [
+        ":vector_cuda",
+        "@cuda_cudart//:cudart",
+        "@gtest//:gtest_main",
+        "@local_config_cuda//cuda:implicit_cuda_headers_dependency",
+    ],
+)
