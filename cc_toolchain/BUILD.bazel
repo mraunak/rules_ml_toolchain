@@ -37,6 +37,7 @@ cc_toolchain_import(
         "@sysroot_linux_x86_64//:includes_system",
         "@sysroot_linux_x86_64//:glibc",
         "@sysroot_linux_x86_64//:pthread",
+        "@llvm_linux_x86_64//:libclang_rt",
     ],
     visibility = ["//visibility:public"],
 )
@@ -135,6 +136,11 @@ cc_toolchain_config(
         "//third_party/rules_cc_toolchain/features:c++11",
         "//third_party/rules_cc_toolchain/features:c++14",
         "//third_party/rules_cc_toolchain/features:c++17",
+
+        #
+        "//cc_toolchain/features:allow_shlib_undefined",
+        "//cc_toolchain/features:supports_dynamic_linker",
+        "//cc_toolchain/features:supports_start_end_lib_feature",
     ],
     linker = "@llvm_linux_x86_64//:ld",
     target_cpu = "x86_64",
@@ -205,6 +211,7 @@ cc_toolchain_import(
         "@sysroot_linux_x86_64//:includes_system",
         "@sysroot_linux_x86_64//:glibc",
         "@sysroot_linux_x86_64//:pthread",
+        "@llvm_linux_x86_64//:libclang_rt",
     ],
     visibility = ["//visibility:public"],
 )
@@ -312,6 +319,11 @@ cc_toolchain_config(
         "//third_party/rules_cc_toolchain/features:c++11",
         "//third_party/rules_cc_toolchain/features:c++14",
         "//third_party/rules_cc_toolchain/features:c++17",
+
+        #
+        "//cc_toolchain/features:allow_shlib_undefined",
+        "//cc_toolchain/features:supports_dynamic_linker",
+        "//cc_toolchain/features:supports_start_end_lib_feature",
     ],
     linker = "@llvm_linux_x86_64//:ld",
     target_cpu = "x86_64",
@@ -455,6 +467,11 @@ cc_toolchain_config(
         "//third_party/rules_cc_toolchain/features:c++11",
         "//third_party/rules_cc_toolchain/features:c++14",
         "//third_party/rules_cc_toolchain/features:c++17",
+
+        #
+        "//cc_toolchain/features:allow_shlib_undefined",
+        "//cc_toolchain/features:supports_dynamic_linker",
+        "//cc_toolchain/features:supports_start_end_lib_feature",
     ],
     linker = "@llvm_linux_x86_64//:ld",
     target_cpu = "aarch64",
@@ -610,6 +627,11 @@ cc_toolchain_config(
         "//third_party/rules_cc_toolchain/features:c++11",
         "//third_party/rules_cc_toolchain/features:c++14",
         "//third_party/rules_cc_toolchain/features:c++17",
+
+        #
+        "//cc_toolchain/features:allow_shlib_undefined",
+        "//cc_toolchain/features:supports_dynamic_linker",
+        "//cc_toolchain/features:supports_start_end_lib_feature",
     ],
     dynamic_library_extension = ".dylib",
     install_name = "@llvm_linux_x86_64//:install_name_tool_darwin",
@@ -751,6 +773,11 @@ cc_toolchain_config(
         "//third_party/rules_cc_toolchain/features:c++11",
         "//third_party/rules_cc_toolchain/features:c++14",
         "//third_party/rules_cc_toolchain/features:c++17",
+
+        #
+        "//cc_toolchain/features:allow_shlib_undefined",
+        "//cc_toolchain/features:supports_dynamic_linker",
+        "//cc_toolchain/features:supports_start_end_lib_feature",
     ],
     dynamic_library_extension = ".dylib",
     install_name = "@llvm_macos_aarch64//:install_name_tool_darwin",
