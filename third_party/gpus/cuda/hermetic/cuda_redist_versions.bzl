@@ -82,6 +82,14 @@ CUDA_REDIST_JSON_DICT = {
         "https://developer.download.nvidia.com/compute/cuda/redist/redistrib_12.8.1.json",
         "249e28a83008d711d5f72880541c8be6253f6d61608461de4fcb715554a6cf17",
     ],
+    "12.9.0": [
+        "https://developer.download.nvidia.com/compute/cuda/redist/redistrib_12.9.0.json",
+        "4e4e17a12adcf8cac40b990e1618406cd7ad52da1817819166af28a9dfe21d4a",
+    ],
+    "12.9.1": [
+        "https://developer.download.nvidia.com/compute/cuda/redist/redistrib_12.9.1.json",
+        "8335301010b0023ee1ff61eb11e2600ca62002d76780de4089011ad77e0c7630",
+    ],
 }
 
 MIRRORED_TARS_CUDA_REDIST_JSON_DICT = {
@@ -204,6 +212,26 @@ CUDNN_REDIST_JSON_DICT = {
         "https://developer.download.nvidia.com/compute/cudnn/redist/redistrib_9.8.0.json",
         "a1599fa1f8dcb81235157be5de5ab7d3936e75dfc4e1e442d07970afad3c4843",
     ],
+    "9.9.0": [
+        "https://developer.download.nvidia.com/compute/cudnn/redist/redistrib_9.9.0.json",
+        "614d3c5ceb02e1eb1508f0bc9231c3c03c113bb514b950a1108adb9fde801c77",
+    ],
+    "9.10.0": [
+        "https://developer.download.nvidia.com/compute/cudnn/redist/redistrib_9.10.0.json",
+        "d06b8df4d305dd7021838ffb2a26c2a861d522f2a129c6a372fad72ca009b1f1",
+    ],
+    "9.10.1": [
+        "https://developer.download.nvidia.com/compute/cudnn/redist/redistrib_9.10.1.json",
+        "2ac8d48d3ab4de1acdce65fa3e8ecfb14750d4e101b05fe3307d2f95f2740563",
+    ],
+    "9.10.2": [
+        "https://developer.download.nvidia.com/compute/cudnn/redist/redistrib_9.10.2.json",
+        "73a33a12bbb8eb12b105a515b5921db2e328b3ca679f92b6184c7f32fe94a8b0",
+    ],
+    "9.11.0": [
+        "https://developer.download.nvidia.com/compute/cudnn/redist/redistrib_9.11.0.json",
+        "7a16458ea21573e18d190df0c8d68ea1e8c82faf1bcfad4a39ceb600c26639cc",
+    ],
 }
 
 MIRRORED_TARS_CUDNN_REDIST_JSON_DICT = {
@@ -310,22 +338,7 @@ CUDA_11_NCCL_WHEEL_DICT = {
 
 CUDA_NCCL_WHEELS = {
     "11.8": CUDA_11_NCCL_WHEEL_DICT,
-    "12.1.0": CUDA_12_NCCL_WHEEL_DICT,
-    "12.1.1": CUDA_12_NCCL_WHEEL_DICT,
-    "12.2.0": CUDA_12_NCCL_WHEEL_DICT,
-    "12.3.1": CUDA_12_NCCL_WHEEL_DICT,
-    "12.3.2": CUDA_12_NCCL_WHEEL_DICT,
-    "12.4.0": CUDA_12_NCCL_WHEEL_DICT,
-    "12.4.1": CUDA_12_NCCL_WHEEL_DICT,
-    "12.5.0": CUDA_12_NCCL_WHEEL_DICT,
-    "12.5.1": CUDA_12_NCCL_WHEEL_DICT,
-    "12.6.0": CUDA_12_NCCL_WHEEL_DICT,
-    "12.6.1": CUDA_12_NCCL_WHEEL_DICT,
-    "12.6.2": CUDA_12_NCCL_WHEEL_DICT,
-    "12.6.3": CUDA_12_NCCL_WHEEL_DICT,
-    "12.8.0": CUDA_12_NCCL_WHEEL_DICT,
-    "12.8.1": CUDA_12_NCCL_WHEEL_DICT,
-}
+} | {v: CUDA_12_NCCL_WHEEL_DICT for v in CUDA_REDIST_JSON_DICT}
 
 # Ensures PTX version compatibility w/ Clang & ptxas in cuda_configure.bzl
 PTX_VERSION_DICT = {
@@ -357,6 +370,7 @@ REDIST_VERSIONS_TO_BUILD_TEMPLATES = {
     "nvidia_driver": {
         "repo_name": "cuda_driver",
         "version_to_template": {
+            "575": "//third_party/gpus/cuda/hermetic:cuda_driver.BUILD.tpl",
             "570": "//third_party/gpus/cuda/hermetic:cuda_driver.BUILD.tpl",
             "560": "//third_party/gpus/cuda/hermetic:cuda_driver.BUILD.tpl",
             "555": "//third_party/gpus/cuda/hermetic:cuda_driver.BUILD.tpl",
