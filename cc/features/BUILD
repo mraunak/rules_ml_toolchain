@@ -94,6 +94,15 @@ cc_feature(
     enabled = True,
 )
 
+# Required when building with clang>=19, see jax-ml/jax#27091
+cc_feature(
+    name = "clang19",
+    compiler_flags = [
+        "-Wno-error=c23-extensions",
+    ],
+    enabled = True,
+)
+
 cc_toolchain_sysroot_feature(
     name = "sysroot_linux_x86_64",
     enabled = True,
