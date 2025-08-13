@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,18 +15,8 @@
 # limitations under the License.
 # ==============================================================================
 
-load("@rules_cc//cc:defs.bzl", "cc_toolchain")
-load("//third_party/rules_cc_toolchain:toolchain_config.bzl", "cc_toolchain_config")
-load("//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl", "cc_toolchain_import")
+# allow passing the output of one command as input to the next
+set -o pipefail
 
-# DEPRECATED TOOLCHAINS, USE //cc:linux_x86_64_linux_x86_64 and //cc:linux_x86_64_linux_x86_64_cuda INSTEAD
-
-alias(
-    name = "lx64_lx64",
-    actual = "@rules_ml_toolchain//cc:linux_x86_64_linux_x86_64",
-)
-
-alias(
-    name = "lx64_lx64_cuda",
-    actual = "@rules_ml_toolchain//cc:linux_x86_64_linux_x86_64_cuda",
-)
+# run specified tool with all arguments
+$LD_PATH $@
