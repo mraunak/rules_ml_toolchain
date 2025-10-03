@@ -13,79 +13,50 @@
 # limitations under the License.
 # ==============================================================================
 
-load(
-    "@rules_ml_toolchain//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl",
-    "cc_toolchain_import",
-)
-
-exports_files(glob(["bin/*"]))
-
-CLANG_VERSION = "18"
-
-filegroup(
+alias(
     name = "all",
-    srcs = glob(["**/*"]),
+    actual = "@%{llvm_repo_name}//:all",
     visibility = ["//visibility:public"],
 )
 
-filegroup(
+alias(
     name = "clang",
-    srcs = [
-        "bin/clang",
-    ],
+    actual = "@%{llvm_repo_name}//:clang",
     visibility = ["//visibility:public"],
 )
 
-filegroup(
+alias(
     name = "clang++",
-    srcs = [
-        "bin/clang++",
-    ],
+    actual = "@%{llvm_repo_name}//:clang++",
     visibility = ["//visibility:public"],
 )
 
-filegroup(
+alias(
     name = "ld",
-    srcs = [
-        "bin/ld.lld",
-    ],
+    actual = "@%{llvm_repo_name}//:ld",
     visibility = ["//visibility:public"],
 )
 
-filegroup(
+alias(
     name = "ar",
-    srcs = ["bin/llvm-libtool-darwin"],
+    actual = "@%{llvm_repo_name}//:ar",
     visibility = ["//visibility:public"],
 )
 
-filegroup(
+alias(
     name = "install_name_tool_darwin",
-    srcs = ["bin/llvm-install-name-tool"],
+    actual = "@%{llvm_repo_name}//:install_name_tool_darwin",
     visibility = ["//visibility:public"],
 )
 
-filegroup(
+alias(
     name = "asan_ignorelist",
-    srcs = [
-        "lib/clang/{clang_version}/share/asan_ignorelist.txt".format(clang_version = CLANG_VERSION),
-    ],
+    actual = "@%{llvm_repo_name}//:asan_ignorelist",
     visibility = ["//visibility:public"],
 )
 
-cc_toolchain_import(
+alias(
     name = "includes",
-    hdrs = glob([
-        "lib/clang/*/*.h",
-        "lib/clang/*/include/*.h",
-        "lib/clang/*/include/**/*.h",
-    ]),
-    includes = [
-        "lib/clang/{clang_version}".format(clang_version = CLANG_VERSION),
-        "lib/clang/{clang_version}/include".format(clang_version = CLANG_VERSION),
-    ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "@platforms//os:macos": [],
-    }),
+    actual = "@%{llvm_repo_name}//:includes",
     visibility = ["//visibility:public"],
 )
