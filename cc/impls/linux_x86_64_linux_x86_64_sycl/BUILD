@@ -145,9 +145,9 @@ filegroup(
 
 cc_toolchain_config(
     name = "config",
-    archiver = "@llvm_linux_x86_64//:ar",
-    c_compiler = "@llvm_linux_x86_64//:clang",
-    cc_compiler = "@llvm_linux_x86_64//:clang++",
+    archiver = "//cc/impls/linux_x86_64_linux_x86_64_sycl/ar_archiver",
+    c_compiler = "/usr/lib/llvm-18/clang",
+    cc_compiler = "/usr/lib/llvm-18/clang++",
     compiler_features = [
         ":imports_feature",
         "@oneapi//:binaries",
@@ -192,7 +192,7 @@ cc_toolchain_config(
         "//cc/impls/linux_x86_64_linux_x86_64_sycl/features:no_as_needed",
         "//cc/impls/linux_x86_64_linux_x86_64_sycl/features:runtime_library_search_directories",
     ],
-    linker = "@llvm_linux_x86_64//:ld",
+    linker = "/usr/bin/ld.lld",
     target_cpu = "x86_64",
     target_system_name = "local",
     tool_paths = SYCL_TOOLS,
