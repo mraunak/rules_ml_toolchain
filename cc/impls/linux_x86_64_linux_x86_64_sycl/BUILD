@@ -145,7 +145,7 @@ filegroup(
 
 cc_toolchain_config(
     name = "config",
-    archiver = "@oneapi//:ar",
+    archiver = ":wrappers",
     c_compiler = "@llvm_linux_x86_64//:clang",
     cc_compiler = "@llvm_linux_x86_64//:clang++",
     compiler_features = [
