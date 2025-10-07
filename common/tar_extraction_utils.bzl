@@ -17,34 +17,25 @@ load(
     "//third_party/remote_config:common.bzl",
     "execute",
     "get_bash_bin",
-    "realpath",
-    "which",
 )
 
-def extract_tar_with_non_hermetic_tar_tool(repository_ctx, file_name, strip_prefix):
-    if repository_ctx.os.name != "linux":
-        repository_ctx.extract(
-            archive = file_name,
-            stripPrefix = strip_prefix,
-        )
-        return
 
-    tar_tool_path = _get_tool_path(repository_ctx, "tar")
-    if not tar_tool_path:
+def extract_tar_with_non_hermetic_tar_tool(repository_ctx, file_name, strip_prefix):
+    if not (repository_ctx.os.name == "linux" and hasattr(repository_ctx.attr, "tar_tool")):
         repository_ctx.extract(
             archive = file_name,
             stripPrefix = strip_prefix,
         )
         return
+    tar_tool_path = repository_ctx.path(repository_ctx.attr.tar_tool)
     if file_name.endswith(".xz"):
-        # Multithreading was introduced in version 5.8.1.
-        xz_tool_path = _get_tool_path(repository_ctx, "xz", [5, 8, 1])
-        if not xz_tool_path:
+        if not hasattr(repository_ctx.attr, "xz_tool"):
             repository_ctx.extract(
                 archive = file_name,
                 stripPrefix = strip_prefix,
             )
             return
+        xz_tool_path = repository_ctx.path(repository_ctx.attr.xz_tool)
         compress_program_option = "--use-compress-program=%s" % xz_tool_path
     else:
         compress_program_option = ""
@@ -64,30 +55,29 @@ def extract_tar_with_non_hermetic_tar_tool(repository_ctx, file_name, strip_pref
             stripPrefix = strip_prefix,
         )
 
-def _is_above_min_version(actual_ver, min_ver):
-    for i in range(0, len(min_ver)):
-        actual_ver_int = int(actual_ver[i])
-        if actual_ver_int < min_ver[i]:
-            return False
-        if actual_ver_int > min_ver[i]:
-            return True
-    return True
+def _tool_archive_impl(repository_ctx):
+    if repository_ctx.os.arch == "aarch64":
+        repository_ctx.download_and_extract(
+            sha256 = repository_ctx.attr.linux_aarch64_sha256,
+            stripPrefix = repository_ctx.attr.linux_aarch64_strip_prefix,
+            url = repository_ctx.attr.linux_aarch64_urls,
+        )
+    else:
+        repository_ctx.download_and_extract(
+            sha256 = repository_ctx.attr.linux_x86_64_sha256,
+            stripPrefix = repository_ctx.attr.linux_x86_64_strip_prefix,
+            url = repository_ctx.attr.linux_x86_64_urls,
+        )
+    repository_ctx.file("BUILD.bazel", "")
 
-def _get_tool_version(repository_ctx, path, bash_bin = None):
-    if bash_bin == None:
-        bash_bin = get_bash_bin(repository_ctx)
-
-    return execute(repository_ctx, [bash_bin, "-c", "\"%s\" --version" % path]).stdout.strip()
-
-def _get_tool_path(repository_ctx, tool_name, min_version = None):
-    tool = which(repository_ctx, tool_name, allow_failure = True)
-    if not tool:
-        return None
-
-    if min_version:
-        tool_version_result = _get_tool_version(repository_ctx, tool)
-        tool_version = tool_version_result.split("\n")[0].split(" ")[-1]
-        if not _is_above_min_version(tool_version.split("."), min_version):
-            return None
-
-    return realpath(repository_ctx, tool)
+tool_archive = repository_rule(
+    implementation = _tool_archive_impl,
+    attrs = {
+        "linux_x86_64_urls": attr.string_list(),
+        "linux_x86_64_sha256": attr.string(),
+        "linux_x86_64_strip_prefix": attr.string(),
+        "linux_aarch64_urls": attr.string_list(),
+        "linux_aarch64_sha256": attr.string(),
+        "linux_aarch64_strip_prefix": attr.string(),
+    },
+)
