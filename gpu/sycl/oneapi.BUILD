@@ -262,10 +262,12 @@ cc_library(
     hdrs = glob([
         "mkl/{oneapi_version}/include/**".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/include/**".format(oneapi_version = ONEAPI_VERSION),
+        "compiler/{oneapi_version}/opt/compiler/include/**".format(oneapi_version = ONEAPI_VERSION),
     ]),
     includes = [
         "mkl/{oneapi_version}/include".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/include".format(oneapi_version = ONEAPI_VERSION),
+        "compiler/{oneapi_version}/opt/compiler/include/**".format(oneapi_version = ONEAPI_VERSION),
     ],
     visibility = ["//visibility:public"],
 )
