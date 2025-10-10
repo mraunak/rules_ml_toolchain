@@ -57,6 +57,16 @@ def _rpath_feature(ctx):
             flag_set(
                 actions = all_link_actions(),
                 flag_groups = [
+                    flag_group(flags = [
+                        "-Wl,-z,origin",
+                        "-Wl,-rpath,$ORIGIN",
+                        "-Wl,-rpath,$ORIGIN/../../../_solib_k8",
+                    ]),
+                ],
+            ),
+            flag_set(
+                actions = all_link_actions(),
+                flag_groups = [
                     _iterate_flag_group(
                         iterate_over = "runtime_library_search_directories",
                         flags = [
