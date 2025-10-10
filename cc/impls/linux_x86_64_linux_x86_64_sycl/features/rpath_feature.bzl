@@ -61,6 +61,8 @@ def _rpath_feature(ctx):
                         "-Wl,-z,origin",
                         "-Wl,-rpath,$ORIGIN",
                         "-Wl,-rpath,$ORIGIN/../../../_solib_k8",
+                        "-Wl,-rpath,$ORIGIN/../../../_solib_x86_64"
+                        
                     ]),
                 ],
             ),
