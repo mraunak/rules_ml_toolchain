@@ -170,6 +170,11 @@ alias(
 )
 
 alias(
+  name = "nvrtc_headers",
+  actual = "@cuda_nvrtc//:headers",
+)
+
+alias(
   name = "cublas",
   actual = "@cuda_cublas//:cublas",
 )
@@ -202,6 +207,11 @@ alias(
 alias(
   name = "curand",
   actual = "@cuda_curand//:curand",
+)
+
+alias(
+  name = "nvrtc",
+  actual = "@cuda_nvrtc//:nvrtc",
 )
 
 cc_library(
