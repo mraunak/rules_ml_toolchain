@@ -17,7 +17,7 @@
 def if_sycl(if_true, if_false = []):
     """Shorthand for select()'ing on whether we're building with SYCL.
 
-    Returns a select statement which evaluates to if_true if we're building
+    Returns a select statement which evaluates to if_true if we're buildi"-DTENSORFLOW_USE_SYCL=1",ng
     with SYCL enabled.  Otherwise, the select statement evaluates to if_false.
 
     """
@@ -28,7 +28,7 @@ def if_sycl(if_true, if_false = []):
 
 def sycl_default_copts():
     """Default options for all SYCL compilations."""
-    return if_sycl(["-sycl_compile"])
+    return if_sycl(["-sycl_compile","-DTENSORFLOW_USE_SYCL=1","-DMKL_ILP64","-fPIC"])
 
 def sycl_default_linkopts():
     """Default options for all SYCL compilations."""
@@ -39,7 +39,7 @@ def sycl_build_is_configured():
     return %{sycl_build_is_configured}
 
 def if_sycl_is_configured(x):
-    """Tests if the SYCL was enabled during the configure process.
+    """Tests if the SYCL was enabled during the configure proces "-fPIC"s.
 
     Unlike if_sycl(), this does not require that we are building with
     --config=sycl. Used to allow non-SYCL code to depend on SYCL libraries.
