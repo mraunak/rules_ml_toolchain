@@ -53,10 +53,7 @@ def _write_minimal_build(ctx):
 
     if ctx.name == "oneapi":
         # Provide provider-bearing imports expected by the toolchain.
-        lines.append(
-            'load("@rules_ml_toolchain//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl", '
-            '"cc_toolchain_import")'
-        )
+        lines.append('load("@rules_ml_toolchain//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl", "cc_toolchain_import")')
 
         # Common filegroup stubs (kept for compatibility)
         lines += [
@@ -76,32 +73,17 @@ def _write_minimal_build(ctx):
             'cc_toolchain_import(name = "includes")',
             'cc_toolchain_import(name = "core")',
             'cc_toolchain_import(name = "libclang_rt")',
-            # Uncomment if your toolchain expects @oneapi//:binaries as an import:
             # 'cc_toolchain_import(name = "binaries")',
         ]
 
         # Executable wrappers that defer to system tools (configurable via --action_env)
-        ctx.file("tools/clang.sh",
-                 "#!/usr/bin/env bash\nexec \"${CLANG_COMPILER_PATH:-clang}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/clangxx.sh",
-                 "#!/usr/bin/env bash\nexec \"${CLANGXX_COMPILER_PATH:-clang++}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/icpx.sh",
-                 "#!/usr/bin/env bash\nexec \"${ICPX_PATH:-icpx}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/llvm-objcopy.sh",
-                 "#!/usr/bin/env bash\nexec \"${LLVM_OBJCOPY_PATH:-llvm-objcopy}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/ld.sh",
-                 "#!/usr/bin/env bash\nexec \"${LD_PATH:-ld}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/ar.sh",
-                 "#!/usr/bin/env bash\nexec \"${AR_PATH:-ar}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/clang-offload-bundler.sh",
-                 "#!/usr/bin/env bash\nexec \"${CLANG_OFFLOAD_BUNDLER_PATH:-clang-offload-bundler}\" \"$@\"\n",
-                 executable = True)
+        ctx.file("tools/clang.sh", "#!/usr/bin/env bash\nexec \"${CLANG_COMPILER_PATH:-clang}\" \"$@\"\n", executable = True)
+        ctx.file("tools/clangxx.sh", "#!/usr/bin/env bash\nexec \"${CLANGXX_COMPILER_PATH:-clang++}\" \"$@\"\n", executable = True)
+        ctx.file("tools/icpx.sh", "#!/usr/bin/env bash\nexec \"${ICPX_PATH:-icpx}\" \"$@\"\n", executable = True)
+        ctx.file("tools/llvm-objcopy.sh", "#!/usr/bin/env bash\nexec \"${LLVM_OBJCOPY_PATH:-llvm-objcopy}\" \"$@\"\n", executable = True)
+        ctx.file("tools/ld.sh", "#!/usr/bin/env bash\nexec \"${LD_PATH:-ld}\" \"$@\"\n", executable = True)
+        ctx.file("tools/ar.sh", "#!/usr/bin/env bash\nexec \"${AR_PATH:-ar}\" \"$@\"\n", executable = True)
+        ctx.file("tools/clang-offload-bundler.sh", "#!/usr/bin/env bash\nexec \"${CLANG_OFFLOAD_BUNDLER_PATH:-clang-offload-bundler}\" \"$@\"\n", executable = True)
 
         lines += [
             'sh_binary(name = "clang", srcs = ["tools/clang.sh"])',
@@ -145,10 +127,8 @@ def _use_downloaded_archive(ctx):
         return
 
     if dist_key not in ctx.attr.distrs:
-        fail(
-            ("Version {version} for platform {platform} is not supported.")
-            .format(version = _get_oneapi_version(ctx), platform = _get_os(ctx))
-        )
+        fail(("Version {version} for platform {platform} is not supported.")
+             .format(version = _get_oneapi_version(ctx), platform = _get_os(ctx)))
 
     dist = ctx.attr.distrs[dist_key]
     _download_distribution(ctx, dist)
