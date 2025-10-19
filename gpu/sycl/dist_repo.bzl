@@ -22,17 +22,10 @@ def _download_distribution(ctx, dist):
     url = dist[0]
     file_name = _get_file_name(url)
     print("Downloading {}".format(url))  # buildifier: disable=print
-    ctx.download(
-        url = url,
-        output = file_name,
-        sha256 = dist[1],
-    )
+    ctx.download(url = url, output = file_name, sha256 = dist[1])
     strip_prefix = dist[2]
     print("Extracting {} with strip prefix '{}'".format(file_name, strip_prefix))  # buildifier: disable=print
-    ctx.extract(
-        archive = file_name,
-        stripPrefix = strip_prefix,
-    )
+    ctx.extract(archive = file_name, stripPrefix = strip_prefix)
     ctx.delete(file_name)
 
 def _is_hermetic(ctx):
@@ -45,7 +38,7 @@ def _get_os(ctx):
     return ctx.getenv("OS", "")
 
 def _get_dist_key(ctx):
-    # Non-hermetic: signal caller to no-op.
+    # Non-hermetic => no-op repo
     if not _is_hermetic(ctx):
         return None
     oneapi_version = _get_oneapi_version(ctx)
@@ -59,33 +52,31 @@ def _write_minimal_build(ctx):
     lines = ['package(default_visibility = ["//visibility:public"])']
 
     if ctx.name == "oneapi":
-        # Import the rule that provides CcToolchainImportInfo.
+        # Provide provider-bearing imports expected by the toolchain.
         lines.append(
             'load("@rules_ml_toolchain//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl", '
             '"cc_toolchain_import")'
         )
 
-        # Filegroup stubs still fine for "all"/"headers"/"libs"/"mkl"/etc.
+        # Common filegroup stubs (kept for compatibility)
         lines += [
             'filegroup(name = "all", srcs = [])',
             'filegroup(name = "headers", srcs = [])',
-            'filegroup(name = "includes", srcs = [])',  # kept for compatibility; not used by toolchain_import
+            'filegroup(name = "includes", srcs = [])',
             'filegroup(name = "libs", srcs = [])',
             'filegroup(name = "mkl", srcs = [])',
-            'filegroup(name = "core", srcs = [])',       # optional; we'll also provide cc_toolchain_import "core"
-            'filegroup(name = "libclang_rt", srcs = [])',# optional; see below
-            'filegroup(name = "binaries", srcs = [])',   # may be used by feature wiring
+            'filegroup(name = "core", srcs = [])',
+            'filegroup(name = "libclang_rt", srcs = [])',
+            'filegroup(name = "binaries", srcs = [])',
             'filegroup(name = "feature", srcs = [])',
         ]
 
-        # *** Provide the required provider for toolchain aggregation ***
-        # These empty cc_toolchain_imports satisfy deps in cc/impls/...:imports.
+        # Provider stubs required by cc_toolchain_import aggregation.
         lines += [
             'cc_toolchain_import(name = "includes")',
             'cc_toolchain_import(name = "core")',
             'cc_toolchain_import(name = "libclang_rt")',
-            # Optional: if your toolchain lists "@oneapi//:binaries" in compiler_features
-            # and expects the same provider shape, you can expose it too:
+            # Uncomment if your toolchain expects @oneapi//:binaries as an import:
             # 'cc_toolchain_import(name = "binaries")',
         ]
 
@@ -135,7 +126,6 @@ def _write_minimal_build(ctx):
         ]
 
     ctx.file("BUILD.bazel", "\n".join(lines) + "\n")
-
 
 def _build_file(ctx, build_file):
     """Write a BUILD file from a template label."""
