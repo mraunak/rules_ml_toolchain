@@ -18,3 +18,18 @@ alias(
     name = "sycl_headers",
     actual = "@@oneapi//:headers"
 )
+
+alias(
+    name = "level_zero_headers",
+    actual = "@@level_zero//:headers"
+)
+
+alias(
+    name = "oneapi_libs",
+    actual = "@@oneapi//:libs"
+)
+
+alias(
+    name = "ze_loader",
+    actual = "@@zero_loader//:libze_loader"
+)
