@@ -48,28 +48,29 @@ def _get_dist_key(ctx):
     return "{}_{}".format(os_id, oneapi_version)
 
 def _write_minimal_build(ctx):
-    # Public package with stubs so labels resolve in non-hermetic mode.
     lines = ['package(default_visibility = ["//visibility:public"])']
 
     if ctx.name == "oneapi":
-        # Provider-bearing imports expected by the toolchain.
+        # Providers expected by the toolchain:
         lines.append(
             'load("@rules_ml_toolchain//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl", "cc_toolchain_import")'
         )
+        lines.append(
+            'load("@rules_ml_toolchain//third_party/rules_cc_toolchain/features:features.bzl", "cc_toolchain_import_feature")'
+        )
 
-        # Common filegroup stubs (not provider-bearing).
+        # Keep filegroups that are *not* provider-bearing targets.
         lines += [
             'filegroup(name = "all", srcs = [])',
             'filegroup(name = "headers", srcs = [])',
             'filegroup(name = "libs", srcs = [])',
-            'filegroup(name = "binaries", srcs = [])',
             'filegroup(name = "feature", srcs = [])',
             'filegroup(name = "includes_fg", srcs = [])',
             'filegroup(name = "core_fg", srcs = [])',
             'filegroup(name = "libclang_rt_fg", srcs = [])',
         ]
 
-        # Provider stubs required by cc_toolchain_import aggregation.
+        # Provider stubs required by cc_toolchain_import(:imports)
         lines += [
             'cc_toolchain_import(name = "includes")',
             'cc_toolchain_import(name = "core")',
@@ -77,8 +78,18 @@ def _write_minimal_build(ctx):
             'cc_toolchain_import(name = "mkl")',
         ]
 
-        # ---- Tool wrappers as PLAIN FILES (not sh_binary) ----
-        # Create executable scripts that exec system tools (configurable via --action_env).
+        # >>>>>>>>> CHANGE HERE: make :binaries provide FeatureInfo <<<<<<<<<
+        # Minimal feature that points at one of the above imports (doesn't matter which).
+        # This satisfies compiler_features = ["@oneapi//:binaries"].
+        lines += [
+            'cc_toolchain_import_feature(',
+            '    name = "binaries",',
+            '    enabled = True,',
+            '    toolchain_import = ":includes",',
+            ')',
+        ]
+
+        # Tool wrappers as plain files (no launcher), exposed via filegroup labels
         ctx.file("tools/clang.sh",               '#!/usr/bin/env bash\nexec "${CLANG_COMPILER_PATH:-clang}" "$@"\n',               executable = True)
         ctx.file("tools/clangxx.sh",             '#!/usr/bin/env bash\nexec "${CLANGXX_COMPILER_PATH:-clang++}" "$@"\n',           executable = True)
         ctx.file("tools/icpx.sh",                '#!/usr/bin/env bash\nexec "${ICPX_PATH:-icpx}" "$@"\n',                          executable = True)
@@ -87,7 +98,6 @@ def _write_minimal_build(ctx):
         ctx.file("tools/ar.sh",                  '#!/usr/bin/env bash\nexec "${AR_PATH:-ar}" "$@"\n',                              executable = True)
         ctx.file("tools/clang-offload-bundler.sh",'#!/usr/bin/env bash\nexec "${CLANG_OFFLOAD_BUNDLER_PATH:-clang-offload-bundler}" "$@"\n', executable = True)
 
-        # Expose them as FILEGROUPS so the toolchain can use these labels without launcher deps.
         lines += [
             'filegroup(name = "clang", srcs = ["tools/clang.sh"])',
             'filegroup(name = "clang++", srcs = ["tools/clangxx.sh"])',
@@ -111,6 +121,7 @@ def _write_minimal_build(ctx):
         ]
 
     ctx.file("BUILD.bazel", "\n".join(lines) + "\n")
+
 
 
 def _build_file(ctx, build_file):
