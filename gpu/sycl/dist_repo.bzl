@@ -53,19 +53,23 @@ def _write_minimal_build(ctx):
 
     if ctx.name == "oneapi":
         # Provide provider-bearing imports expected by the toolchain.
-        lines.append('load("@rules_ml_toolchain//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl", "cc_toolchain_import")')
+        lines.append(
+            'load("@rules_ml_toolchain//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl", "cc_toolchain_import")'
+        )
 
-        # Common filegroup stubs (kept for compatibility)
+        # Filegroup stubs for labels the toolchain/BUILDs might reference.
+        # NOTE: DO NOT create filegroups named "includes", "core", "libclang_rt"
+        # because we define cc_toolchain_import with those names below.
         lines += [
             'filegroup(name = "all", srcs = [])',
             'filegroup(name = "headers", srcs = [])',
-            'filegroup(name = "includes", srcs = [])',
             'filegroup(name = "libs", srcs = [])',
             'filegroup(name = "mkl", srcs = [])',
-            'filegroup(name = "core", srcs = [])',
-            'filegroup(name = "libclang_rt", srcs = [])',
             'filegroup(name = "binaries", srcs = [])',
             'filegroup(name = "feature", srcs = [])',
+            'filegroup(name = "includes_fg", srcs = [])',
+            'filegroup(name = "core_fg", srcs = [])',
+            'filegroup(name = "libclang_rt_fg", srcs = [])',
         ]
 
         # Provider stubs required by cc_toolchain_import aggregation.
@@ -73,17 +77,32 @@ def _write_minimal_build(ctx):
             'cc_toolchain_import(name = "includes")',
             'cc_toolchain_import(name = "core")',
             'cc_toolchain_import(name = "libclang_rt")',
+            # If your toolchain expects @oneapi//:binaries as an import with this provider, uncomment:
             # 'cc_toolchain_import(name = "binaries")',
         ]
 
         # Executable wrappers that defer to system tools (configurable via --action_env)
-        ctx.file("tools/clang.sh", "#!/usr/bin/env bash\nexec \"${CLANG_COMPILER_PATH:-clang}\" \"$@\"\n", executable = True)
-        ctx.file("tools/clangxx.sh", "#!/usr/bin/env bash\nexec \"${CLANGXX_COMPILER_PATH:-clang++}\" \"$@\"\n", executable = True)
-        ctx.file("tools/icpx.sh", "#!/usr/bin/env bash\nexec \"${ICPX_PATH:-icpx}\" \"$@\"\n", executable = True)
-        ctx.file("tools/llvm-objcopy.sh", "#!/usr/bin/env bash\nexec \"${LLVM_OBJCOPY_PATH:-llvm-objcopy}\" \"$@\"\n", executable = True)
-        ctx.file("tools/ld.sh", "#!/usr/bin/env bash\nexec \"${LD_PATH:-ld}\" \"$@\"\n", executable = True)
-        ctx.file("tools/ar.sh", "#!/usr/bin/env bash\nexec \"${AR_PATH:-ar}\" \"$@\"\n", executable = True)
-        ctx.file("tools/clang-offload-bundler.sh", "#!/usr/bin/env bash\nexec \"${CLANG_OFFLOAD_BUNDLER_PATH:-clang-offload-bundler}\" \"$@\"\n", executable = True)
+        ctx.file("tools/clang.sh",
+                 "#!/usr/bin/env bash\nexec \"${CLANG_COMPILER_PATH:-clang}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/clangxx.sh",
+                 "#!/usr/bin/env bash\nexec \"${CLANGXX_COMPILER_PATH:-clang++}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/icpx.sh",
+                 "#!/usr/bin/env bash\nexec \"${ICPX_PATH:-icpx}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/llvm-objcopy.sh",
+                 "#!/usr/bin/env bash\nexec \"${LLVM_OBJCOPY_PATH:-llvm-objcopy}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/ld.sh",
+                 "#!/usr/bin/env bash\nexec \"${LD_PATH:-ld}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/ar.sh",
+                 "#!/usr/bin/env bash\nexec \"${AR_PATH:-ar}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/clang-offload-bundler.sh",
+                 "#!/usr/bin/env bash\nexec \"${CLANG_OFFLOAD_BUNDLER_PATH:-clang-offload-bundler}\" \"$@\"\n",
+                 executable = True)
 
         lines += [
             'sh_binary(name = "clang", srcs = ["tools/clang.sh"])',
