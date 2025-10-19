@@ -52,12 +52,12 @@ def _write_minimal_build(ctx):
     lines = ['package(default_visibility = ["//visibility:public"])']
 
     if ctx.name == "oneapi":
-        # Provider-bearing rule used by the toolchain
+        # Provider-bearing imports expected by the toolchain.
         lines.append(
             'load("@rules_ml_toolchain//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl", "cc_toolchain_import")'
         )
 
-        # Keep only filegroups that are NOT also defined as cc_toolchain_import targets.
+        # Common filegroup stubs (not provider-bearing).
         lines += [
             'filegroup(name = "all", srcs = [])',
             'filegroup(name = "headers", srcs = [])',
@@ -69,33 +69,33 @@ def _write_minimal_build(ctx):
             'filegroup(name = "libclang_rt_fg", srcs = [])',
         ]
 
-        # These labels must provide CcToolchainImportInfo for cc_toolchain_import(:imports)
+        # Provider stubs required by cc_toolchain_import aggregation.
         lines += [
             'cc_toolchain_import(name = "includes")',
             'cc_toolchain_import(name = "core")',
             'cc_toolchain_import(name = "libclang_rt")',
-            'cc_toolchain_import(name = "mkl")',  # <-- added
-            # If your toolchain also expects this as a provider, uncomment:
-            # 'cc_toolchain_import(name = "binaries")',
+            'cc_toolchain_import(name = "mkl")',
         ]
 
-        # Executable wrappers deferring to system tools (configurable via --action_env)
-        ctx.file("tools/clang.sh", "#!/usr/bin/env bash\nexec \"${CLANG_COMPILER_PATH:-clang}\" \"$@\"\n", executable = True)
-        ctx.file("tools/clangxx.sh", "#!/usr/bin/env bash\nexec \"${CLANGXX_COMPILER_PATH:-clang++}\" \"$@\"\n", executable = True)
-        ctx.file("tools/icpx.sh", "#!/usr/bin/env bash\nexec \"${ICPX_PATH:-icpx}\" \"$@\"\n", executable = True)
-        ctx.file("tools/llvm-objcopy.sh", "#!/usr/bin/env bash\nexec \"${LLVM_OBJCOPY_PATH:-llvm-objcopy}\" \"$@\"\n", executable = True)
-        ctx.file("tools/ld.sh", "#!/usr/bin/env bash\nexec \"${LD_PATH:-ld}\" \"$@\"\n", executable = True)
-        ctx.file("tools/ar.sh", "#!/usr/bin/env bash\nexec \"${AR_PATH:-ar}\" \"$@\"\n", executable = True)
-        ctx.file("tools/clang-offload-bundler.sh", "#!/usr/bin/env bash\nexec \"${CLANG_OFFLOAD_BUNDLER_PATH:-clang-offload-bundler}\" \"$@\"\n", executable = True)
+        # ---- Tool wrappers as PLAIN FILES (not sh_binary) ----
+        # Create executable scripts that exec system tools (configurable via --action_env).
+        ctx.file("tools/clang.sh",               '#!/usr/bin/env bash\nexec "${CLANG_COMPILER_PATH:-clang}" "$@"\n',               executable = True)
+        ctx.file("tools/clangxx.sh",             '#!/usr/bin/env bash\nexec "${CLANGXX_COMPILER_PATH:-clang++}" "$@"\n',           executable = True)
+        ctx.file("tools/icpx.sh",                '#!/usr/bin/env bash\nexec "${ICPX_PATH:-icpx}" "$@"\n',                          executable = True)
+        ctx.file("tools/llvm-objcopy.sh",        '#!/usr/bin/env bash\nexec "${LLVM_OBJCOPY_PATH:-llvm-objcopy}" "$@"\n',          executable = True)
+        ctx.file("tools/ld.sh",                  '#!/usr/bin/env bash\nexec "${LD_PATH:-ld}" "$@"\n',                              executable = True)
+        ctx.file("tools/ar.sh",                  '#!/usr/bin/env bash\nexec "${AR_PATH:-ar}" "$@"\n',                              executable = True)
+        ctx.file("tools/clang-offload-bundler.sh",'#!/usr/bin/env bash\nexec "${CLANG_OFFLOAD_BUNDLER_PATH:-clang-offload-bundler}" "$@"\n', executable = True)
 
+        # Expose them as FILEGROUPS so the toolchain can use these labels without launcher deps.
         lines += [
-            'sh_binary(name = "clang", srcs = ["tools/clang.sh"])',
-            'sh_binary(name = "clang++", srcs = ["tools/clangxx.sh"])',
-            'sh_binary(name = "icpx", srcs = ["tools/icpx.sh"])',
-            'sh_binary(name = "llvm-objcopy", srcs = ["tools/llvm-objcopy.sh"])',
-            'sh_binary(name = "ld", srcs = ["tools/ld.sh"])',
-            'sh_binary(name = "ar", srcs = ["tools/ar.sh"])',
-            'sh_binary(name = "clang-offload-bundler", srcs = ["tools/clang-offload-bundler.sh"])',
+            'filegroup(name = "clang", srcs = ["tools/clang.sh"])',
+            'filegroup(name = "clang++", srcs = ["tools/clangxx.sh"])',
+            'filegroup(name = "icpx", srcs = ["tools/icpx.sh"])',
+            'filegroup(name = "llvm-objcopy", srcs = ["tools/llvm-objcopy.sh"])',
+            'filegroup(name = "ld", srcs = ["tools/ld.sh"])',
+            'filegroup(name = "ar", srcs = ["tools/ar.sh"])',
+            'filegroup(name = "clang-offload-bundler", srcs = ["tools/clang-offload-bundler.sh"])',
         ]
 
     elif ctx.name == "level_zero":
