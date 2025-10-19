@@ -55,25 +55,36 @@ def _get_dist_key(ctx):
     return "{}_{}".format(os_id, oneapi_version)
 
 def _write_minimal_build(ctx):
-    # Create an empty public package so the repo resolves but provides no targets.
-    ctx.file(
-        "BUILD.bazel",
-        'package(default_visibility = ["//visibility:public"])\n',
-    )
+    # Create a public package with stubs so common labels resolve in non-hermetic mode.
+    lines = ['package(default_visibility = ["//visibility:public"])']
+
+    if ctx.name == "oneapi":
+        # Frequently referenced labels from toolchains/BUILDs
+        lines.append('filegroup(name = "mkl", srcs = [])')
+        lines.append('filegroup(name = "headers", srcs = [])')
+        lines.append('filegroup(name = "libs", srcs = [])')
+
+    elif ctx.name == "level_zero":
+        lines.append('filegroup(name = "headers", srcs = [])')
+
+    elif ctx.name == "zero_loader":
+        lines.append('filegroup(name = "libze_loader", srcs = [])')
+
+    ctx.file("BUILD.bazel", "\n".join(lines) + "\n")
 
 def _build_file(ctx, build_file):
     """Write a BUILD file from a template label."""
     ctx.file("BUILD.bazel", ctx.read(build_file))
 
 def _handle_level_zero(ctx):
-    # Symlink for includes backward compatibility (e.g. #include <level_zero/ze_api.h>)
+    # Symlink for includes backward compatibility (e.g., #include <level_zero/ze_api.h>)
     ctx.symlink("include", "level_zero")
 
 def _use_downloaded_archive(ctx):
     """Downloads redistribution and initializes hermetic repository."""
     dist_key = _get_dist_key(ctx)
 
-    # Non-hermetic: produce a no-op repo and return.
+    # Non-hermetic: produce a stub repo and return.
     if dist_key == None:
         _write_minimal_build(ctx)
         return
@@ -96,7 +107,6 @@ def _use_downloaded_archive(ctx):
     _build_file(ctx, Label(build_template))
 
 def _dist_repo_impl(ctx):
-    # Previously a placeholder for local_dist_path. Keep behavior minimal.
     _use_downloaded_archive(ctx)
 
 dist_repo = repository_rule(
