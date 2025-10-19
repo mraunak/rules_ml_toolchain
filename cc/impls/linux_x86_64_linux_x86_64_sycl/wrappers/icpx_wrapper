@@ -33,6 +33,7 @@ import re
 import sys
 import shlex
 import tempfile
+import shutile
 
 ONEAPI_LIBRARY_PATH = os.environ.get('ONEAPI_LIBRARY_PATH', os.environ.get('LD_LIBRARY_PATH', ''))
 ONEAPI_VERSION = os.environ.get('ONEAPI_VERSION', 'unknown')
