@@ -55,14 +55,48 @@ def _get_dist_key(ctx):
     return "{}_{}".format(os_id, oneapi_version)
 
 def _write_minimal_build(ctx):
-    # Create a public package with stubs so common labels resolve in non-hermetic mode.
     lines = ['package(default_visibility = ["//visibility:public"])']
 
     if ctx.name == "oneapi":
-        # Frequently referenced labels from toolchains/BUILDs
-        lines.append('filegroup(name = "mkl", srcs = [])')
-        lines.append('filegroup(name = "headers", srcs = [])')
-        lines.append('filegroup(name = "libs", srcs = [])')
+        # Stubs so labels resolve
+        lines += [
+            'filegroup(name = "mkl", srcs = [])',
+            'filegroup(name = "headers", srcs = [])',
+            'filegroup(name = "libs", srcs = [])',
+        ]
+
+        # Wrappers that exec system tools; pick up paths via --action_env if set
+        ctx.file("tools/clang.sh",
+                 "#!/usr/bin/env bash\nexec \"${CLANG_COMPILER_PATH:-clang}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/clangxx.sh",
+                 "#!/usr/bin/env bash\nexec \"${CLANGXX_COMPILER_PATH:-clang++}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/icpx.sh",
+                 "#!/usr/bin/env bash\nexec \"${ICPX_PATH:-icpx}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/llvm-objcopy.sh",
+                 "#!/usr/bin/env bash\nexec \"${LLVM_OBJCOPY_PATH:-llvm-objcopy}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/ld.sh",
+                 "#!/usr/bin/env bash\nexec \"${LD_PATH:-ld}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/ar.sh",
+                 "#!/usr/bin/env bash\nexec \"${AR_PATH:-ar}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/clang-offload-bundler.sh",
+                 "#!/usr/bin/env bash\nexec \"${CLANG_OFFLOAD_BUNDLER_PATH:-clang-offload-bundler}\" \"$@\"\n",
+                 executable = True)
+
+        lines += [
+            'sh_binary(name = "clang", srcs = ["tools/clang.sh"])',
+            'sh_binary(name = "clang++", srcs = ["tools/clangxx.sh"])',
+            'sh_binary(name = "icpx", srcs = ["tools/icpx.sh"])',
+            'sh_binary(name = "llvm-objcopy", srcs = ["tools/llvm-objcopy.sh"])',
+            'sh_binary(name = "ld", srcs = ["tools/ld.sh"])',
+            'sh_binary(name = "ar", srcs = ["tools/ar.sh"])',
+            'sh_binary(name = "clang-offload-bundler", srcs = ["tools/clang-offload-bundler.sh"])',
+        ]
 
     elif ctx.name == "level_zero":
         lines.append('filegroup(name = "headers", srcs = [])')
