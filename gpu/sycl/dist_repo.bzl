@@ -52,19 +52,16 @@ def _write_minimal_build(ctx):
     lines = ['package(default_visibility = ["//visibility:public"])']
 
     if ctx.name == "oneapi":
-        # Provide provider-bearing imports expected by the toolchain.
+        # Provider-bearing rule used by the toolchain
         lines.append(
             'load("@rules_ml_toolchain//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl", "cc_toolchain_import")'
         )
 
-        # Filegroup stubs for labels the toolchain/BUILDs might reference.
-        # NOTE: DO NOT create filegroups named "includes", "core", "libclang_rt"
-        # because we define cc_toolchain_import with those names below.
+        # Keep only filegroups that are NOT also defined as cc_toolchain_import targets.
         lines += [
             'filegroup(name = "all", srcs = [])',
             'filegroup(name = "headers", srcs = [])',
             'filegroup(name = "libs", srcs = [])',
-            'filegroup(name = "mkl", srcs = [])',
             'filegroup(name = "binaries", srcs = [])',
             'filegroup(name = "feature", srcs = [])',
             'filegroup(name = "includes_fg", srcs = [])',
@@ -72,37 +69,24 @@ def _write_minimal_build(ctx):
             'filegroup(name = "libclang_rt_fg", srcs = [])',
         ]
 
-        # Provider stubs required by cc_toolchain_import aggregation.
+        # These labels must provide CcToolchainImportInfo for cc_toolchain_import(:imports)
         lines += [
             'cc_toolchain_import(name = "includes")',
             'cc_toolchain_import(name = "core")',
             'cc_toolchain_import(name = "libclang_rt")',
-            # If your toolchain expects @oneapi//:binaries as an import with this provider, uncomment:
+            'cc_toolchain_import(name = "mkl")',  # <-- added
+            # If your toolchain also expects this as a provider, uncomment:
             # 'cc_toolchain_import(name = "binaries")',
         ]
 
-        # Executable wrappers that defer to system tools (configurable via --action_env)
-        ctx.file("tools/clang.sh",
-                 "#!/usr/bin/env bash\nexec \"${CLANG_COMPILER_PATH:-clang}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/clangxx.sh",
-                 "#!/usr/bin/env bash\nexec \"${CLANGXX_COMPILER_PATH:-clang++}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/icpx.sh",
-                 "#!/usr/bin/env bash\nexec \"${ICPX_PATH:-icpx}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/llvm-objcopy.sh",
-                 "#!/usr/bin/env bash\nexec \"${LLVM_OBJCOPY_PATH:-llvm-objcopy}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/ld.sh",
-                 "#!/usr/bin/env bash\nexec \"${LD_PATH:-ld}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/ar.sh",
-                 "#!/usr/bin/env bash\nexec \"${AR_PATH:-ar}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/clang-offload-bundler.sh",
-                 "#!/usr/bin/env bash\nexec \"${CLANG_OFFLOAD_BUNDLER_PATH:-clang-offload-bundler}\" \"$@\"\n",
-                 executable = True)
+        # Executable wrappers deferring to system tools (configurable via --action_env)
+        ctx.file("tools/clang.sh", "#!/usr/bin/env bash\nexec \"${CLANG_COMPILER_PATH:-clang}\" \"$@\"\n", executable = True)
+        ctx.file("tools/clangxx.sh", "#!/usr/bin/env bash\nexec \"${CLANGXX_COMPILER_PATH:-clang++}\" \"$@\"\n", executable = True)
+        ctx.file("tools/icpx.sh", "#!/usr/bin/env bash\nexec \"${ICPX_PATH:-icpx}\" \"$@\"\n", executable = True)
+        ctx.file("tools/llvm-objcopy.sh", "#!/usr/bin/env bash\nexec \"${LLVM_OBJCOPY_PATH:-llvm-objcopy}\" \"$@\"\n", executable = True)
+        ctx.file("tools/ld.sh", "#!/usr/bin/env bash\nexec \"${LD_PATH:-ld}\" \"$@\"\n", executable = True)
+        ctx.file("tools/ar.sh", "#!/usr/bin/env bash\nexec \"${AR_PATH:-ar}\" \"$@\"\n", executable = True)
+        ctx.file("tools/clang-offload-bundler.sh", "#!/usr/bin/env bash\nexec \"${CLANG_OFFLOAD_BUNDLER_PATH:-clang-offload-bundler}\" \"$@\"\n", executable = True)
 
         lines += [
             'sh_binary(name = "clang", srcs = ["tools/clang.sh"])',
@@ -127,6 +111,7 @@ def _write_minimal_build(ctx):
         ]
 
     ctx.file("BUILD.bazel", "\n".join(lines) + "\n")
+
 
 def _build_file(ctx, build_file):
     """Write a BUILD file from a template label."""
