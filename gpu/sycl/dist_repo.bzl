@@ -55,38 +55,59 @@ def _get_dist_key(ctx):
     return "{}_{}".format(os_id, oneapi_version)
 
 def _write_minimal_build(ctx):
+    # Create a public package with stubs so labels resolve in non-hermetic mode.
     lines = ['package(default_visibility = ["//visibility:public"])']
 
     if ctx.name == "oneapi":
-        # Stubs so labels resolve
+        # --- Filegroup stubs commonly referenced by toolchains/BUILDs ---
         lines += [
-            'filegroup(name = "mkl", srcs = [])',
+            'filegroup(name = "all", srcs = [])',
             'filegroup(name = "headers", srcs = [])',
+            'filegroup(name = "includes", srcs = [])',
             'filegroup(name = "libs", srcs = [])',
+            'filegroup(name = "mkl", srcs = [])',
+            'filegroup(name = "core", srcs = [])',
+            'filegroup(name = "libclang_rt", srcs = [])',
+            'filegroup(name = "binaries", srcs = [])',
+            'filegroup(name = "feature", srcs = [])',
         ]
 
-        # Wrappers that exec system tools; pick up paths via --action_env if set
-        ctx.file("tools/clang.sh",
-                 "#!/usr/bin/env bash\nexec \"${CLANG_COMPILER_PATH:-clang}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/clangxx.sh",
-                 "#!/usr/bin/env bash\nexec \"${CLANGXX_COMPILER_PATH:-clang++}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/icpx.sh",
-                 "#!/usr/bin/env bash\nexec \"${ICPX_PATH:-icpx}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/llvm-objcopy.sh",
-                 "#!/usr/bin/env bash\nexec \"${LLVM_OBJCOPY_PATH:-llvm-objcopy}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/ld.sh",
-                 "#!/usr/bin/env bash\nexec \"${LD_PATH:-ld}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/ar.sh",
-                 "#!/usr/bin/env bash\nexec \"${AR_PATH:-ar}\" \"$@\"\n",
-                 executable = True)
-        ctx.file("tools/clang-offload-bundler.sh",
-                 "#!/usr/bin/env bash\nexec \"${CLANG_OFFLOAD_BUNDLER_PATH:-clang-offload-bundler}\" \"$@\"\n",
-                 executable = True)
+        # --- Executable wrappers that defer to system tools (configurable via --action_env) ---
+        ctx.file(
+            "tools/clang.sh",
+            "#!/usr/bin/env bash\nexec \"${CLANG_COMPILER_PATH:-clang}\" \"$@\"\n",
+            executable = True,
+        )
+        ctx.file(
+            "tools/clangxx.sh",
+            "#!/usr/bin/env bash\nexec \"${CLANGXX_COMPILER_PATH:-clang++}\" \"$@\"\n",
+            executable = True,
+        )
+        ctx.file(
+            "tools/icpx.sh",
+            "#!/usr/bin/env bash\nexec \"${ICPX_PATH:-icpx}\" \"$@\"\n",
+            executable = True,
+        )
+        ctx.file(
+            "tools/llvm-objcopy.sh",
+            "#!/usr/bin/env bash\nexec \"${LLVM_OBJCOPY_PATH:-llvm-objcopy}\" \"$@\"\n",
+            executable = True,
+        )
+        ctx.file(
+            "tools/ld.sh",
+            "#!/usr/bin/env bash\nexec \"${LD_PATH:-ld}\" \"$@\"\n",
+            executable = True,
+        )
+        ctx.file(
+            "tools/ar.sh",
+            "#!/usr/bin/env bash\nexec \"${AR_PATH:-ar}\" \"$@\"\n",
+            executable = True,
+        )
+        ctx.file(
+            "tools/clang-offload-bundler.sh",
+            "#!/usr/bin/env bash\nexec \"${CLANG_OFFLOAD_BUNDLER_PATH:-clang-offload-bundler}\" \"$@\"\n",
+            executable = True,
+        )
 
         lines += [
             'sh_binary(name = "clang", srcs = ["tools/clang.sh"])',
