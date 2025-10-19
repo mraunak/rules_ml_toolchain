@@ -1,0 +1,1 @@
+exports_files(["find_sycl_config.py"])
