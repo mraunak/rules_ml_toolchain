@@ -96,7 +96,7 @@ def _run_find_sycl_config(ctx):
     if not py:
         fail("Could not find python3/python on PATH to run find_sycl_config.py")
 
-    script = ctx.path(Label("//third_party/gpus:find_sycl_config.py"))
+    script = ctx.path(Label("//gpu/sycl:find_sycl_config.py"))
     res = ctx.execute([py, script], timeout = 120, quiet = True)
     if res.return_code != 0:
         fail("find_sycl_config.py failed ({}):\nSTDOUT:\n{}\nSTDERR:\n{}".format(
