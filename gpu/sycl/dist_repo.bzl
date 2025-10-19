@@ -59,7 +59,7 @@ def _write_minimal_build(ctx):
     lines = ['package(default_visibility = ["//visibility:public"])']
 
     if ctx.name == "oneapi":
-        # --- Filegroup stubs commonly referenced by toolchains/BUILDs ---
+        # Common filegroup stubs referenced by toolchains/BUILDs
         lines += [
             'filegroup(name = "all", srcs = [])',
             'filegroup(name = "headers", srcs = [])',
@@ -72,42 +72,28 @@ def _write_minimal_build(ctx):
             'filegroup(name = "feature", srcs = [])',
         ]
 
-        # --- Executable wrappers that defer to system tools (configurable via --action_env) ---
-        ctx.file(
-            "tools/clang.sh",
-            "#!/usr/bin/env bash\nexec \"${CLANG_COMPILER_PATH:-clang}\" \"$@\"\n",
-            executable = True,
-        )
-        ctx.file(
-            "tools/clangxx.sh",
-            "#!/usr/bin/env bash\nexec \"${CLANGXX_COMPILER_PATH:-clang++}\" \"$@\"\n",
-            executable = True,
-        )
-        ctx.file(
-            "tools/icpx.sh",
-            "#!/usr/bin/env bash\nexec \"${ICPX_PATH:-icpx}\" \"$@\"\n",
-            executable = True,
-        )
-        ctx.file(
-            "tools/llvm-objcopy.sh",
-            "#!/usr/bin/env bash\nexec \"${LLVM_OBJCOPY_PATH:-llvm-objcopy}\" \"$@\"\n",
-            executable = True,
-        )
-        ctx.file(
-            "tools/ld.sh",
-            "#!/usr/bin/env bash\nexec \"${LD_PATH:-ld}\" \"$@\"\n",
-            executable = True,
-        )
-        ctx.file(
-            "tools/ar.sh",
-            "#!/usr/bin/env bash\nexec \"${AR_PATH:-ar}\" \"$@\"\n",
-            executable = True,
-        )
-        ctx.file(
-            "tools/clang-offload-bundler.sh",
-            "#!/usr/bin/env bash\nexec \"${CLANG_OFFLOAD_BUNDLER_PATH:-clang-offload-bundler}\" \"$@\"\n",
-            executable = True,
-        )
+        # Executable wrappers deferring to system tools (configurable via --action_env)
+        ctx.file("tools/clang.sh",
+                 "#!/usr/bin/env bash\nexec \"${CLANG_COMPILER_PATH:-clang}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/clangxx.sh",
+                 "#!/usr/bin/env bash\nexec \"${CLANGXX_COMPILER_PATH:-clang++}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/icpx.sh",
+                 "#!/usr/bin/env bash\nexec \"${ICPX_PATH:-icpx}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/llvm-objcopy.sh",
+                 "#!/usr/bin/env bash\nexec \"${LLVM_OBJCOPY_PATH:-llvm-objcopy}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/ld.sh",
+                 "#!/usr/bin/env bash\nexec \"${LD_PATH:-ld}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/ar.sh",
+                 "#!/usr/bin/env bash\nexec \"${AR_PATH:-ar}\" \"$@\"\n",
+                 executable = True)
+        ctx.file("tools/clang-offload-bundler.sh",
+                 "#!/usr/bin/env bash\nexec \"${CLANG_OFFLOAD_BUNDLER_PATH:-clang-offload-bundler}\" \"$@\"\n",
+                 executable = True)
 
         lines += [
             'sh_binary(name = "clang", srcs = ["tools/clang.sh"])',
@@ -120,10 +106,18 @@ def _write_minimal_build(ctx):
         ]
 
     elif ctx.name == "level_zero":
-        lines.append('filegroup(name = "headers", srcs = [])')
+        # Add :all and :headers stubs (toolchain references :all)
+        lines += [
+            'filegroup(name = "all", srcs = [])',
+            'filegroup(name = "headers", srcs = [])',
+        ]
 
     elif ctx.name == "zero_loader":
-        lines.append('filegroup(name = "libze_loader", srcs = [])')
+        # Add :all and loader stub (some toolchains glob :all)
+        lines += [
+            'filegroup(name = "all", srcs = [])',
+            'filegroup(name = "libze_loader", srcs = [])',
+        ]
 
     ctx.file("BUILD.bazel", "\n".join(lines) + "\n")
 
