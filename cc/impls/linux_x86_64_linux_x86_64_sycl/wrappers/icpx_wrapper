@@ -34,8 +34,8 @@ import sys
 import shlex
 import tempfile
 
-ONEAPI_LIBRARY_PATH = os.environ['ONEAPI_LIBRARY_PATH']
-ONEAPI_VERSION = os.environ['ONEAPI_VERSION']
+ONEAPI_LIBRARY_PATH = os.environ.get('ONEAPI_LIBRARY_PATH', os.environ.get('LD_LIBRARY_PATH', ''))
+ONEAPI_VERSION = os.environ.get('ONEAPI_VERSION', 'unknown')
 
 def check_is_intel_llvm(path):
   cmd = path + " -dM -E -x c /dev/null | grep '__INTEL_LLVM_COMPILER'"
@@ -44,14 +44,20 @@ def check_is_intel_llvm(path):
     return True
   return False
 
-ONEAPI_COMPILER = os.environ['ONEAPI_ICPX_PATH']
-if not os.path.exists(ONEAPI_COMPILER):
-  ONEAPI_COMPILER = os.environ['ONEAPI_CLANG_PATH']
-  if not os.path.exists(ONEAPI_COMPILER) or check_is_intel_llvm(ONEAPI_COMPILER):
-    raise RuntimeError("Compiler '{0}' and '{1}' not found or invalid. Current directory is '{2}'"
-      .format(os.environ['ONEAPI_ICPX_PATH'], os.environ['ONEAPI_CLANG_PATH'], os.getcwd()))
+ONEAPI_COMPILER = (
+    os.environ.get('ONEAPI_ICPX_PATH') or
+    os.environ.get('ONEAPI_CLANG_PATH') or
+    os.environ.get('CLANG_COMPILER_PATH') or  # from --action_env
+    shutil.which('icpx') or
+    shutil.which('clang')
+)
+if not ONEAPI_COMPILER or not os.path.exists(ONEAPI_COMPILER):
+  raise RuntimeError(
+      "SYCL compiler not found. Set ONEAPI_ICPX_PATH or ONEAPI_CLANG_PATH "
+      "or CLANG_COMPILER_PATH; current dir: '{}'".format(os.getcwd())
+  )
 
-CPU_COMPILER = os.environ['GCC_PATH']   # GCC_PATH is Clang compiler path
+CPU_COMPILER = os.environ.get('GCC_PATH', os.environ.get('CLANG_COMPILER_PATH', ONEAPI_COMPILER))
 USE_ICPX_CLANG = True
 
 # %{tf_icpx_clang} is not replaced in old template
@@ -60,11 +66,13 @@ USE_ICPX_CLANG = True
 #else:
 # USE_ICPX_CLANG = True
 
-result = subprocess.run(["which", "ar"], capture_output=True, text=True)
-if result.returncode == 0:
-    AR_PATH = result.stdout.strip()  # Remove any trailing newline
-else:
-    raise RuntimeError("ar not found or invalid")
+AR_PATH = os.environ.get('AR_PATH')
+if not AR_PATH:
+  result = subprocess.run(["which", "ar"], capture_output=True, text=True)
+  if result.returncode == 0:
+      AR_PATH = result.stdout.strip()
+  else:
+      raise RuntimeError("ar not found on PATH and AR_PATH not set")
 
 def system(cmd):
   """Invokes cmd with os.system()"""
