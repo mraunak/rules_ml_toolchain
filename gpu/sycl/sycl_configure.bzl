@@ -78,8 +78,6 @@ def _create_dummy_repository(ctx):
     )
     ctx.file("sycl/BUILD", "")
 
-# --- minimal helpers for non-hermetic detection ---
-
 def _parse_keyvals(stdout):
     # expects lines like:  key: value
     d = {}
@@ -124,10 +122,9 @@ def _sycl_configure_impl(ctx):
         # Hermetic: façade aliases to vendor repos
         ctx.file("sycl/BUILD", ctx.read(ctx.attr.build_file))
     else:
-        # Non-hermetic: discover system paths and generate façade shims
+        # Non-hermetic: 
         cfg = _run_find_sycl_config(ctx)
 
-        # Minimal required keys (extend as needed)
         required = [
             "mkl_include_dir",
             "mkl_library_dir",
