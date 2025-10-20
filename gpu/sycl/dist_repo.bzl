@@ -18,18 +18,27 @@ def _get_file_name(url):
     return url[last_slash_index + 1:]
 
 def _download_distribution(ctx, dist):
+    # buildifier: disable=function-docstring-args
     """Downloads and extracts Intel distribution."""
+
     url = dist[0]
     file_name = _get_file_name(url)
     print("Downloading {}".format(url))  # buildifier: disable=print
-    ctx.download(url = url, output = file_name, sha256 = dist[1])
-    strip_prefix = dist[2]
-    print("Extracting {} with strip prefix '{}'".format(file_name, strip_prefix))  # buildifier: disable=print
-    ctx.extract(archive = file_name, stripPrefix = strip_prefix)
-    ctx.delete(file_name)
+    ctx.download(
+        url = url,
+        output = file_name,
+        sha256 = dist[1],
+    )
 
-def _is_hermetic(ctx):
-    return ctx.getenv("SYCL_BUILD_HERMETIC") == "1"
+    strip_prefix = dist[2]
+
+    print("Extracting {} with strip prefix '{}'".format(file_name, strip_prefix))  # buildifier: disable=print
+    ctx.extract(
+        archive = file_name,
+        stripPrefix = strip_prefix,
+    )
+
+    ctx.delete(file_name)
 
 def _get_oneapi_version(ctx):
     return ctx.getenv("ONEAPI_VERSION", "")
@@ -38,126 +47,56 @@ def _get_os(ctx):
     return ctx.getenv("OS", "")
 
 def _get_dist_key(ctx):
-    # Non-hermetic => no-op repo
-    if not _is_hermetic(ctx):
-        return None
     oneapi_version = _get_oneapi_version(ctx)
     os_id = _get_os(ctx)
     if not oneapi_version or not os_id:
         fail("ONEAPI_VERSION and OS must be set via --repo_env for hermetic build")
+
     return "{}_{}".format(os_id, oneapi_version)
 
-def _write_minimal_build(ctx):
-    lines = ['package(default_visibility = ["//visibility:public"])']
-
-    if ctx.name == "oneapi":
-        # Providers expected by the toolchain:
-        lines.append(
-            'load("@rules_ml_toolchain//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl", "cc_toolchain_import")'
-        )
-        lines.append(
-            'load("@rules_ml_toolchain//third_party/rules_cc_toolchain/features:features.bzl", "cc_toolchain_import_feature")'
-        )
-
-        # Keep filegroups that are *not* provider-bearing targets.
-        lines += [
-            'filegroup(name = "all", srcs = [])',
-            'filegroup(name = "headers", srcs = [])',
-            'filegroup(name = "libs", srcs = [])',
-            'filegroup(name = "feature", srcs = [])',
-            'filegroup(name = "includes_fg", srcs = [])',
-            'filegroup(name = "core_fg", srcs = [])',
-            'filegroup(name = "libclang_rt_fg", srcs = [])',
-        ]
-
-        # Provider stubs required by cc_toolchain_import(:imports)
-        lines += [
-            'cc_toolchain_import(name = "includes")',
-            'cc_toolchain_import(name = "core")',
-            'cc_toolchain_import(name = "libclang_rt")',
-            'cc_toolchain_import(name = "mkl")',
-        ]
-
-        # >>>>>>>>> CHANGE HERE: make :binaries provide FeatureInfo <<<<<<<<<
-        # Minimal feature that points at one of the above imports (doesn't matter which).
-        # This satisfies compiler_features = ["@oneapi//:binaries"].
-        lines += [
-            'cc_toolchain_import_feature(',
-            '    name = "binaries",',
-            '    enabled = True,',
-            '    toolchain_import = ":includes",',
-            ')',
-        ]
-
-        # Tool wrappers as plain files (no launcher), exposed via filegroup labels
-        ctx.file("tools/clang.sh",               '#!/usr/bin/env bash\nexec "${CLANG_COMPILER_PATH:-clang}" "$@"\n',               executable = True)
-        ctx.file("tools/clangxx.sh",             '#!/usr/bin/env bash\nexec "${CLANGXX_COMPILER_PATH:-clang++}" "$@"\n',           executable = True)
-        ctx.file("tools/icpx.sh",                '#!/usr/bin/env bash\nexec "${ICPX_PATH:-icpx}" "$@"\n',                          executable = True)
-        ctx.file("tools/llvm-objcopy.sh",        '#!/usr/bin/env bash\nexec "${LLVM_OBJCOPY_PATH:-llvm-objcopy}" "$@"\n',          executable = True)
-        ctx.file("tools/ld.sh",                  '#!/usr/bin/env bash\nexec "${LD_PATH:-ld}" "$@"\n',                              executable = True)
-        ctx.file("tools/ar.sh",                  '#!/usr/bin/env bash\nexec "${AR_PATH:-ar}" "$@"\n',                              executable = True)
-        ctx.file("tools/clang-offload-bundler.sh",'#!/usr/bin/env bash\nexec "${CLANG_OFFLOAD_BUNDLER_PATH:-clang-offload-bundler}" "$@"\n', executable = True)
-
-        lines += [
-            'filegroup(name = "clang", srcs = ["tools/clang.sh"])',
-            'filegroup(name = "clang++", srcs = ["tools/clangxx.sh"])',
-            'filegroup(name = "icpx", srcs = ["tools/icpx.sh"])',
-            'filegroup(name = "llvm-objcopy", srcs = ["tools/llvm-objcopy.sh"])',
-            'filegroup(name = "ld", srcs = ["tools/ld.sh"])',
-            'filegroup(name = "ar", srcs = ["tools/ar.sh"])',
-            'filegroup(name = "clang-offload-bundler", srcs = ["tools/clang-offload-bundler.sh"])',
-        ]
-
-    elif ctx.name == "level_zero":
-        lines += [
-            'filegroup(name = "all", srcs = [])',
-            'filegroup(name = "headers", srcs = [])',
-        ]
-
-    elif ctx.name == "zero_loader":
-        lines += [
-            'filegroup(name = "all", srcs = [])',
-            'filegroup(name = "libze_loader", srcs = [])',
-        ]
-
-    ctx.file("BUILD.bazel", "\n".join(lines) + "\n")
-
-
-
 def _build_file(ctx, build_file):
-    """Write a BUILD file from a template label."""
+    """Utility function for writing a BUILD file.
+
+    Args:
+      ctx: The repository context of the repository rule calling this utility function.
+      build_file: The file to use as the BUILD file for this repository. This attribute is an absolute label.
+    """
+
     ctx.file("BUILD.bazel", ctx.read(build_file))
 
 def _handle_level_zero(ctx):
-    # Symlink for includes backward compatibility (e.g., #include <level_zero/ze_api.h>)
+    # Symlink for includes backward compatibility (example: #include <level_zero/ze_api.h>)
     ctx.symlink("include", "level_zero")
 
 def _use_downloaded_archive(ctx):
-    """Downloads redistribution and initializes hermetic repository."""
+    # buildifier: disable=function-docstring-args
+    """ Downloads redistribution and initializes hermetic repository."""
     dist_key = _get_dist_key(ctx)
 
-    # Non-hermetic: produce a stub repo and return.
-    if dist_key == None:
-        _write_minimal_build(ctx)
-        return
-
-    if dist_key not in ctx.attr.distrs:
-        fail(("Version {version} for platform {platform} is not supported.")
-             .format(version = _get_oneapi_version(ctx), platform = _get_os(ctx)))
-
     dist = ctx.attr.distrs[dist_key]
+
+    if not dist:
+        fail(
+            ("Version {version} for platform {platform} is not supported.")
+                .format(version = _get_oneapi_version(ctx), platform = _get_os(ctx)),
+        )
+
     _download_distribution(ctx, dist)
 
     if ctx.name == "level_zero":
         _handle_level_zero(ctx)
 
-    if dist_key not in ctx.attr.build_templates:
-        fail("No build template provided for key '{}'".format(dist_key))
     build_template = ctx.attr.build_templates[dist_key]
     _build_file(ctx, Label(build_template))
 
 def _dist_repo_impl(ctx):
-    _use_downloaded_archive(ctx)
+    local_dist_path = None
+    if local_dist_path:
+        # TODO: Implement SYCL non-hermetic build
+        fail("SYCL non-hermetic build hasn't supported")
+
+    else:
+        _use_downloaded_archive(ctx)
 
 dist_repo = repository_rule(
     implementation = _dist_repo_impl,
