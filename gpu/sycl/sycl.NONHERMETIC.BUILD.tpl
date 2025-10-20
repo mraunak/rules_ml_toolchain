@@ -7,17 +7,14 @@ cc_library(
         "%{dpcpp_include_dir}",
         "%{mkl_include_dir}",
     ],
-    copts = [
-        # Make Clang builtins visible even under -nostdinc/-nostdinc++
-        "-isystem", "%{clang_resource_include}",
-    ],
+    # no copts here; builtin headers handled by wrapper/toolchain
 )
 
 cc_library(
     name = "level_zero_headers",
     hdrs = [],
     includes = ["%{l0_include_dir}"],
-    copts = ["-isystem", "%{clang_resource_include}"],
+    # no copts here either
 )
 
 cc_library(
