@@ -7,14 +7,12 @@ cc_library(
         "%{dpcpp_include_dir}",
         "%{mkl_include_dir}",
     ],
-    # no copts here; builtin headers handled by wrapper/toolchain
 )
 
 cc_library(
     name = "level_zero_headers",
     hdrs = [],
     includes = ["%{l0_include_dir}"],
-    # no copts here either
 )
 
 cc_library(
