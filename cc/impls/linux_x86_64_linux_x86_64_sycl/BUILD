@@ -196,9 +196,6 @@ cc_toolchain_config(
     target_cpu = "x86_64",
     target_system_name = "local",
     tool_paths = SYCL_TOOLS,
-    cxx_builtin_include_directories = [
-        "/usr/lib/llvm-18/lib/clang/18/include",
-    ],
 )
 
 cc_toolchain(
