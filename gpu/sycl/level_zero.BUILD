@@ -31,20 +31,25 @@ package(
 filegroup(
     name = "all",
     srcs = glob([
-            "include/**/*",
-        ],
-    ),
+        "include/**",
+        "level_zero/**",  # also match when a symlink exists
+    ]),
     visibility = ["//visibility:public"],
 )
 
-# Use level_zero symlink for includes backward compatibility (example: #include <level_zero/ze_api.h>)
+# Headers for <level_zero/ze_api.h>.
+# Supports both layouts:
+#  - hermetic: symlink 'level_zero' -> 'include'
+#  - system:   real 'include/level_zero/...'
 cc_library(
     name = "headers",
     hdrs = glob([
-        "level_zero/**/*",
+        "level_zero/**",         # hermetic (via symlink)
+        "include/level_zero/**", # system
     ]),
     includes = [
-        ".",
+        ".",         # makes <level_zero/...> work when symlink exists
+        "include",   # makes <level_zero/...> work when tree is under include/
     ],
     visibility = ["//visibility:public"],
 )
