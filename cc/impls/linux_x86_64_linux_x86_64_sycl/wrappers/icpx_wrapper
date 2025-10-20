@@ -28,248 +28,247 @@ DESCRIPTION:
 from __future__ import print_function
 from argparse import ArgumentParser
 import os
-import subprocess
-import re
 import sys
 import shlex
-import tempfile
 import shutil
+import subprocess
+import tempfile
 
-ONEAPI_LIBRARY_PATH = os.environ.get('ONEAPI_LIBRARY_PATH', os.environ.get('LD_LIBRARY_PATH', ''))
-ONEAPI_VERSION = os.environ.get('ONEAPI_VERSION', 'unknown')
+# ----- Env + tool discovery ---------------------------------------------------
 
-def check_is_intel_llvm(path):
-  cmd = path + " -dM -E -x c /dev/null | grep '__INTEL_LLVM_COMPILER'"
-  check_result = subprocess.getoutput(cmd)
-  if len(check_result) > 0 and check_result.find('__INTEL_LLVM_COMPILER') > -1:
-    return True
-  return False
+ONEAPI_LIBRARY_PATH = os.environ.get("ONEAPI_LIBRARY_PATH", os.environ.get("LD_LIBRARY_PATH", ""))
+ONEAPI_VERSION = os.environ.get("ONEAPI_VERSION", "unknown")
 
+def _exists(p):  # small helper
+    return bool(p) and os.path.exists(p)
+
+# Prefer explicit envs; fall back to system tools
 ONEAPI_COMPILER = (
-    os.environ.get('ONEAPI_ICPX_PATH') or
-    os.environ.get('ONEAPI_CLANG_PATH') or
-    os.environ.get('CLANG_COMPILER_PATH') or  # from --action_env
-    shutil.which('icpx') or
-    shutil.which('clang')
+    os.environ.get("ONEAPI_ICPX_PATH")
+    or os.environ.get("ONEAPI_CLANG_PATH")
+    or os.environ.get("CLANG_COMPILER_PATH")  # from --action_env
+    or shutil.which("icpx")
+    or shutil.which("clang")
 )
-if not ONEAPI_COMPILER or not os.path.exists(ONEAPI_COMPILER):
-  raise RuntimeError(
-      "SYCL compiler not found. Set ONEAPI_ICPX_PATH or ONEAPI_CLANG_PATH "
-      "or CLANG_COMPILER_PATH; current dir: '{}'".format(os.getcwd())
-  )
+if not _exists(ONEAPI_COMPILER):
+    raise RuntimeError(
+        "SYCL compiler not found. Set ONEAPI_ICPX_PATH or ONEAPI_CLANG_PATH or CLANG_COMPILER_PATH. "
+        f"Current dir: {os.getcwd()}"
+    )
 
-CPU_COMPILER = os.environ.get('GCC_PATH', os.environ.get('CLANG_COMPILER_PATH', ONEAPI_COMPILER))
-USE_ICPX_CLANG = True
+# Host compiler used for non-sycl host compilations / links
+CPU_COMPILER = os.environ.get("GCC_PATH") or os.environ.get("CLANG_COMPILER_PATH") or ONEAPI_COMPILER
 
-# %{tf_icpx_clang} is not replaced in old template
-#if ('%{tf_icpx_clang}')=="False":
-# USE_ICPX_CLANG = False
-#else:
-# USE_ICPX_CLANG = True
+# Prefer env AR_PATH; else resolve from PATH
+AR_PATH = os.environ.get("AR_PATH") or shutil.which("ar")
+if not _exists(AR_PATH):
+    raise RuntimeError("ar not found on PATH and AR_PATH not set")
 
-AR_PATH = os.environ.get('AR_PATH')
-if not AR_PATH:
-  result = subprocess.run(["which", "ar"], capture_output=True, text=True)
-  if result.returncode == 0:
-      AR_PATH = result.stdout.strip()
-  else:
-      raise RuntimeError("ar not found on PATH and AR_PATH not set")
+def _clang_resource_include():
+    """
+    Compute ['-isystem', '<resource-dir>/include'] using the real clang binary.
+    Always return a two-arg list so Bazel passes them as separate args.
+    """
+    clang = os.environ.get("CLANG_COMPILER_PATH") or shutil.which("clang")
+    if not clang:
+        return []
+    try:
+        rd = subprocess.check_output([clang, "-print-resource-dir"], text=True).strip()
+        return ["-isystem", f"{rd}/include"] if rd else []
+    except Exception:
+        return []
 
-def system(cmd):
-  """Invokes cmd with os.system()"""
+RESINC = _clang_resource_include()
 
-  ret = os.system(cmd)
-  if os.WIFEXITED(ret):
-    return os.WEXITSTATUS(ret)
-  else:
-    return -os.WTERMSIG(ret)
+# ------------------------------------------------------------------------------
 
-def call_compiler(argv, link = False, sycl_compile = True):
-  parser = ArgumentParser()
-  parser.add_argument('-c', nargs=1, action='append')
-  parser.add_argument('-o', nargs=1, action='append')
-  args, leftover = parser.parse_known_args(argv)
+def _run(cmd_argv):
+    """Run a command (argv list), return its exit code."""
+    try:
+        return subprocess.call(cmd_argv)
+    except OSError as e:
+        print(f"ERROR running {cmd_argv[0]}: {e}", file=sys.stderr)
+        return 1
 
-  flags = leftover
+def call_compiler(argv, link=False, sycl_compile=True):
+    parser = ArgumentParser()
+    parser.add_argument("-c", nargs=1, action="append")
+    parser.add_argument("-o", nargs=1, action="append")
+    args, leftover = parser.parse_known_args(argv)
 
-  sycl_device_only_flags = ['-fsycl']
-  sycl_device_only_flags.append('-fno-sycl-unnamed-lambda')
-  sycl_device_only_flags.append('-fsycl-targets=spir64_gen,spir64')
-  sycl_device_only_flags.append('-sycl-std=2020')
-  sycl_device_only_flags.append('-fhonor-infinities')
-  sycl_device_only_flags.append('-fhonor-nans')
-  sycl_device_only_flags.append('-fno-sycl-use-footer')
-  sycl_device_only_flags.append('-Xclang -fdenormal-fp-math=preserve-sign')
-  sycl_device_only_flags.append('-Xclang -cl-mad-enable')
-  sycl_device_only_flags.append('-cl-fp32-correctly-rounded-divide-sqrt')
-  sycl_device_only_flags.append('-fsycl-device-code-split=per_source')
-  sycl_device_only_flags.append('-fsycl-unnamed-lambda')
+    flags = leftover
 
-  common_flags = []
-  # ref: https://github.com/intel/llvm/blob/sycl/clang/docs/UsersManual.rst#controlling-floating-point-behavior
-  common_flags.append("-fno-finite-math-only")
-  common_flags.append("-fno-fast-math")
-  common_flags.append("-fexceptions")
+    # ---------- Flag sets ----------
+    sycl_device_only_flags = [
+        "-fsycl",
+        "-fno-sycl-unnamed-lambda",
+        "-fsycl-targets=spir64_gen,spir64",
+        "-sycl-std=2020",
+        "-fhonor-infinities",
+        "-fhonor-nans",
+        "-fno-sycl-use-footer",
+        "-Xclang", "-fdenormal-fp-math=preserve-sign",
+        "-Xclang", "-cl-mad-enable",
+        "-cl-fp32-correctly-rounded-divide-sqrt",
+        "-fsycl-device-code-split=per_source",
+        "-fsycl-unnamed-lambda",
+    ]
 
-  compile_flags = []
-  compile_flags.append('-DDNNL_GRAPH_WITH_SYCL=1')
-  compile_flags.append("-std=c++17")
+    # https://github.com/intel/llvm/blob/sycl/clang/docs/UsersManual.rst
+    common_flags = [
+        "-fno-finite-math-only",
+        "-fno-fast-math",
+        "-fexceptions",
+    ] + RESINC  # inject builtin headers for *all* compiles
 
-  link_flags = ['-fPIC']
-  link_flags.append('-lsycl')
-  link_flags.append("-Wl,-no-as-needed")
-  link_flags.append("-Wl,--enable-new-dtags")
-  for lib_path in ONEAPI_LIBRARY_PATH.split(":"):
-    link_flags.append("-L" + lib_path)
-  link_flags.append("-lOpenCL")
+    compile_flags = [
+        "-DDNNL_GRAPH_WITH_SYCL=1",
+        "-std=c++17",
+    ]
 
-  sycl_link_flags = ['-fPIC']
-  sycl_link_flags.append("-fsycl")
-  sycl_link_flags.append('-fsycl-max-parallel-link-jobs=8')
-  sycl_link_flags.append('-fsycl-link')
+    link_flags = [
+        "-fPIC",
+        "-lsycl",
+        "-Wl,-no-as-needed",
+        "-Wl,--enable-new-dtags",
+    ] + sum([["-L" + p] for p in ONEAPI_LIBRARY_PATH.split(":") if p], []) + [
+        "-lOpenCL",
+    ]
 
-  in_files, out_files = [], []
-  if sycl_compile:
-    flags = [shlex.quote(s) for s in flags]
-    # device compilation
-    if args.c:
-      in_files.append('-c')
-      in_files.extend(args.c[0])
-      assert len(args.c[0]) == 1
-    if args.o:
-      out_files.append('-o')
-      out_files.extend(args.o[0])
-      assert len(args.o[0]) == 1
+    sycl_link_flags = [
+        "-fPIC",
+        "-fsycl",
+        "-fsycl-max-parallel-link-jobs=8",
+        "-fsycl-link",
+    ]
 
-    in_file = args.c[0][0]
-    out_file = args.o[0][0]
-    out_file_name = out_file.split('/')[-1].split('.')[0]
+    in_files, out_files = [], []
+    if sycl_compile:
+        # Device compilation: produce an archive with host-usable dev obj
+        if args.c:
+            in_files += ["-c"] + args.c[0]
+        if args.o:
+            out_files += ["-o"] + args.o[0]
 
-    # Create a temporary directory
-    with tempfile.TemporaryDirectory() as temp_dir:
-      object_file = os.path.join(temp_dir, out_file_name + '.compile.o')
-      dev_file = os.path.join(temp_dir, out_file_name + '.dev.o')
+        # Validate -c/-o
+        if not args.c or not args.o or len(args.c[0]) != 1 or len(args.o[0]) != 1:
+            print("icpx_wrapper: expected exactly one -c <src> and -o <out>", file=sys.stderr)
+            return 1
 
-      # compile object file
-      # icx -fsycl -c kernel.cpp -o kernel.compile.o
-      sycl_compile_flags = [" -c {} -o {} ".format(in_file, object_file)]
-      sycl_compile_flags += (flags + common_flags + compile_flags + sycl_device_only_flags)
-      compile_cmd = ('env ' + ONEAPI_COMPILER + ' ' + ' '.join(sycl_compile_flags))
-      exit_status = system(compile_cmd)
-      if exit_status != 0:
-        return exit_status
+        in_file = args.c[0][0]
+        out_file = args.o[0][0]
+        out_base = os.path.splitext(os.path.basename(out_file))[0]
 
-      # generate device object file that can be used by host compiler
-      # icx -fsycl -fPIC -fsycl-link kernel.compile.o -o kernel.dev.o
-      sycl_link_flags_dev = [" {} -o {} ".format(object_file, dev_file)]
-      sycl_link_flags_dev += (common_flags + sycl_link_flags)
-      link_cmd = ('env ' + ONEAPI_COMPILER + ' ' + ' '.join(sycl_link_flags_dev))
-      exit_status = system(link_cmd)
-      if exit_status != 0:
-        return exit_status
+        with tempfile.TemporaryDirectory() as tmp:
+            obj_compile = os.path.join(tmp, out_base + ".compile.o")
+            obj_dev = os.path.join(tmp, out_base + ".dev.o")
 
-      # archive object files
-      # ar rcsD output.o kernel.compile.o kernel.dev.o
-      ar_flags = " rcsD {} {} {}".format(out_file, object_file, dev_file)
-      ar_cmd = ('env ' + AR_PATH + ar_flags)
-      return system(ar_cmd)
-  elif link:
-    # Expand @params file if present
-    expanded_flags = []
-    for s in flags:
-        if s.startswith("@") and os.path.isfile(s[1:]):
-            with open(s[1:], "r") as f:
-                expanded_flags += shlex.split(f.read())
-        else:
-            expanded_flags.append(s)
+            # 1) compile device-enabled obj
+            #    icx -fsycl -c src.cpp -o kernel.compile.o
+            sycl_compile_flags = ["-c", in_file, "-o", obj_compile]
+            sycl_compile_flags += flags + common_flags + compile_flags + sycl_device_only_flags
+            rc = _run([ONEAPI_COMPILER] + sycl_compile_flags)
+            if rc != 0:
+                return rc
 
-    seen = set()
-    ordered_flags = []
+            # 2) produce dev obj for host linker
+            #    icx -fsycl -fPIC -fsycl-link kernel.compile.o -o kernel.dev.o
+            sycl_link_flags_dev = [obj_compile, "-o", obj_dev] + common_flags + sycl_link_flags
+            rc = _run([ONEAPI_COMPILER] + sycl_link_flags_dev)
+            if rc != 0:
+                return rc
 
-    # Track the type of each unique flag and preserve order
-    for s in expanded_flags:
-        if s not in seen:
-            seen.add(s)
-            flag_type = "whole" if s.endswith((".o", ".lo")) else "regular"
-            ordered_flags.append((flag_type, shlex.quote(s)))
+            # 3) archive the two into requested output
+            #    ar rcsD output.o kernel.compile.o kernel.dev.o
+            rc = _run([AR_PATH, "rcsD", out_file, obj_compile, obj_dev])
+            return rc
 
-    deduped_flags = []
-    in_whole_archive = False
+    elif link:
+        # Link stage (host link with potential device libs)
+        # Expand @params files
+        expanded = []
+        for s in flags:
+            if s.startswith("@") and os.path.isfile(s[1:]):
+                with open(s[1:], "r") as f:
+                    expanded += shlex.split(f.read())
+            else:
+                expanded.append(s)
 
-    for flag_type, flag in ordered_flags:
-        if flag_type == "whole":
-            if not in_whole_archive:
-                deduped_flags.append("-Wl,--whole-archive")
-                in_whole_archive = True
-            deduped_flags.append(flag)
-        else:
-            if in_whole_archive:
-                deduped_flags.append("-Wl,--no-whole-archive")
-                in_whole_archive = False
-            deduped_flags.append(flag)
+        # Dedup; keep order; whole-archive grouping
+        seen, ordered = set(), []
+        for s in expanded:
+            if s not in seen:
+                seen.add(s)
+                ftype = "whole" if s.endswith((".o", ".lo")) else "regular"
+                ordered.append((ftype, s))
 
-    # Close any open --whole-archive section
-    if in_whole_archive:
-        deduped_flags.append("-Wl,--no-whole-archive")
+        deduped, in_whole = [], False
+        for ftype, tok in ordered:
+            if ftype == "whole":
+                if not in_whole:
+                    deduped.append("-Wl,--whole-archive")
+                    in_whole = True
+                deduped.append(tok)
+            else:
+                if in_whole:
+                    deduped.append("-Wl,--no-whole-archive")
+                    in_whole = False
+                deduped.append(tok)
+        if in_whole:
+            deduped.append("-Wl,--no-whole-archive")
 
-    # Output file
-    if args.o:
-        out_files.append('-o')
-        out_files.extend(args.o[0])
-    deduped_flags += common_flags + in_files + out_files + link_flags
+        if args.o:
+            out_files += ["-o"] + args.o[0]
 
-    # Write to response file to avoid command line length issues
-    # This saves all flags into a temporary .params file like /tmp/tmpabc123.params to avoid blowing up command line limits.
-    with tempfile.NamedTemporaryFile("w", delete=False, suffix=".params") as f:
-        f.write('\n'.join(deduped_flags))
-        response_file = f.name
-    cmd = f'env {CPU_COMPILER} @{response_file}' # env icpx @/tmp/tmpabc123.params
-    return system(cmd)
-  else:
-    # host compilation
-    if args.c:
-      in_files.append('-c')
-      in_files.extend(args.c[0])
-      input_file = os.path.basename(args.c[0][0])
-    if args.o:
-      out_files.append('-o')
-      out_files.extend(args.o[0])
-    flags += (common_flags + in_files + out_files)
-    VERBOSE = os.environ.get("ONEAPI_VERBOSE", "0") == "1"
-    if USE_ICPX_CLANG:
-      if VERBOSE:
-        print(' '.join([CPU_COMPILER] + flags))
-      return subprocess.call([CPU_COMPILER] + flags)
+        final_flags = deduped + common_flags + in_files + out_files + link_flags
+
+        # Use a response file to avoid argv length limits
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".params") as f:
+            f.write("\n".join(final_flags))
+            rsp = f.name
+
+        return _run([CPU_COMPILER, f"@{rsp}"])
+
     else:
-      if VERBOSE:
-        print(' '.join([SYCL_PATH] + flags))
-      return subprocess.call([ONEAPI_COMPILER] + flags)
+        # Host compilation (non-SYCL)
+        if args.c:
+            in_files += ["-c"] + args.c[0]
+        if args.o:
+            out_files += ["-o"] + args.o[0]
+        final_flags = flags + common_flags + in_files + out_files
+
+        verbose = os.environ.get("ONEAPI_VERBOSE", "0") == "1"
+        if verbose:
+            print(" ".join([CPU_COMPILER] + final_flags))
+        return _run([CPU_COMPILER] + final_flags)
 
 def standardize_key_val_args(argv, key):
-  mod_args = []
-  last = None
-  for arg in argv:
-    if last:
-      mod_args.append(last + arg)
-      last = None
-      continue
-
-    if arg == key:
-      last = key
-    elif arg.startswith(key):
-      mod_args.append(arg.replace(' ', ''))
-    else:
-      mod_args.append(arg)
-
-  return mod_args
+    """
+    Convert sequences like: -isystem <path>  and  '-isystem /path'
+    into two clean args [-isystem, /path]; also keep '-isystem=/path' intact.
+    """
+    out, hold = [], None
+    for a in argv:
+        if hold:
+            out.append(hold)
+            out.append(a)
+            hold = None
+            continue
+        if a == key:
+            hold = key
+        elif a.startswith(key):
+            out.append(a.replace(" ", ""))  # keep -isystem=/path
+        else:
+            out.append(a)
+    return out
 
 def main():
-  parser = ArgumentParser(fromfile_prefix_chars='@')
-  parser.add_argument('-sycl_compile', action='store_true')
-  parser.add_argument('-link_stage', action='store_true')
-  args, leftover = parser.parse_known_args(sys.argv[1:])
+    parser = ArgumentParser(fromfile_prefix_chars="@")
+    parser.add_argument("-sycl_compile", action="store_true")
+    parser.add_argument("-link_stage", action="store_true")
+    args, leftover = parser.parse_known_args(sys.argv[1:])
+    return call_compiler(standardize_key_val_args(leftover, "-isystem"),
+                         link=args.link_stage, sycl_compile=args.sycl_compile)
 
-  return call_compiler(standardize_key_val_args(leftover, "-isystem"), link=args.link_stage, sycl_compile=args.sycl_compile)
-
-if __name__ == '__main__':
-  sys.exit(main())
+if __name__ == "__main__":
+    sys.exit(main())
