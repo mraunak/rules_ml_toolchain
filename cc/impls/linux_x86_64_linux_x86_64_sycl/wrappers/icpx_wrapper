@@ -39,7 +39,7 @@ import tempfile
 ONEAPI_LIBRARY_PATH = os.environ.get("ONEAPI_LIBRARY_PATH", os.environ.get("LD_LIBRARY_PATH", ""))
 ONEAPI_VERSION = os.environ.get("ONEAPI_VERSION", "unknown")
 
-def _exists(p):  # small helper
+def _exists(p):
     return bool(p) and os.path.exists(p)
 
 # Prefer explicit envs; fall back to system tools
@@ -56,7 +56,7 @@ if not _exists(ONEAPI_COMPILER):
         f"Current dir: {os.getcwd()}"
     )
 
-# Host compiler used for non-sycl host compilations / links
+# Host compiler for non-SYCL host compilations / links
 CPU_COMPILER = os.environ.get("GCC_PATH") or os.environ.get("CLANG_COMPILER_PATH") or ONEAPI_COMPILER
 
 # Prefer env AR_PATH; else resolve from PATH
@@ -64,30 +64,31 @@ AR_PATH = os.environ.get("AR_PATH") or shutil.which("ar")
 if not _exists(AR_PATH):
     raise RuntimeError("ar not found on PATH and AR_PATH not set")
 
-def _clang_resource_include():
+def _clang_resource_flag():
     """
-    Compute ['-isystem', '<resource-dir>/include'] using the real clang binary.
-    Always return a two-arg list so Bazel passes them as separate args.
+    Return ['-resource-dir', '<clang-resource-dir>'] using the real clang binary.
+    This lets clang find builtin headers without putting absolute include paths
+    on the command line (which Bazel may reject during include scanning).
     """
     clang = os.environ.get("CLANG_COMPILER_PATH") or shutil.which("clang")
     if not clang:
         return []
     try:
         rd = subprocess.check_output([clang, "-print-resource-dir"], text=True).strip()
-        return ["-isystem", f"{rd}/include"] if rd else []
+        return ["-resource-dir", rd] if rd else []
     except Exception:
         return []
 
-RESINC = _clang_resource_include()
+RESFLAG = _clang_resource_flag()
 
 # ------------------------------------------------------------------------------
 
-def _run(cmd_argv):
+def _run(argv):
     """Run a command (argv list), return its exit code."""
     try:
-        return subprocess.call(cmd_argv)
+        return subprocess.call(argv)
     except OSError as e:
-        print(f"ERROR running {cmd_argv[0]}: {e}", file=sys.stderr)
+        print(f"ERROR running {argv[0]}: {e}", file=sys.stderr)
         return 1
 
 def call_compiler(argv, link=False, sycl_compile=True):
@@ -119,7 +120,7 @@ def call_compiler(argv, link=False, sycl_compile=True):
         "-fno-finite-math-only",
         "-fno-fast-math",
         "-fexceptions",
-    ] + RESINC  # inject builtin headers for *all* compiles
+    ] + RESFLAG  # restore builtin headers for all compiles
 
     compile_flags = [
         "-DDNNL_GRAPH_WITH_SYCL=1",
@@ -143,8 +144,9 @@ def call_compiler(argv, link=False, sycl_compile=True):
     ]
 
     in_files, out_files = [], []
+
     if sycl_compile:
-        # Device compilation: produce an archive with host-usable dev obj
+        # Device compilation: produce an archive containing host-usable dev obj
         if args.c:
             in_files += ["-c"] + args.c[0]
         if args.o:
@@ -184,8 +186,7 @@ def call_compiler(argv, link=False, sycl_compile=True):
             return rc
 
     elif link:
-        # Link stage (host link with potential device libs)
-        # Expand @params files
+        # Link stage (host link with potential device libs). Expand @params files.
         expanded = []
         for s in flags:
             if s.startswith("@") and os.path.isfile(s[1:]):
@@ -245,7 +246,8 @@ def call_compiler(argv, link=False, sycl_compile=True):
 def standardize_key_val_args(argv, key):
     """
     Convert sequences like: -isystem <path>  and  '-isystem /path'
-    into two clean args [-isystem, /path]; also keep '-isystem=/path' intact.
+    into two clean args [-isystem, /path]; keep '-isystem=/path' intact.
+    (Harmless to keep even though we now prefer -resource-dir.)
     """
     out, hold = [], None
     for a in argv:
