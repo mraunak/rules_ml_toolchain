@@ -66,25 +66,34 @@ if not _exists(AR_PATH):
     raise RuntimeError("ar not found on PATH and AR_PATH not set")
 
 def _detect_resource_dir():
-    """Return Clang resource dir string, or '' if not found (exec/target robust)."""
+    """Return Clang resource dir string, robust for exec/target configs."""
+    # 0) Explicit override (belt & suspenders)
+    env_rd = os.environ.get("CLANG_RESOURCE_DIR")
+    if env_rd and os.path.isdir(env_rd):
+        return env_rd
+
     candidates = []
 
-    # Highest priority: explicit envs (from --action_env)
-    c_env = os.environ.get("CLANG_COMPILER_PATH")
+    # 1) Highest priority: explicit tool envs (if present in this action)
+    c_env  = os.environ.get("CLANG_COMPILER_PATH")
+    cxxenv = os.environ.get("CLANGXX_COMPILER_PATH")
     if c_env:
         candidates.append(c_env)
-    cxx_env = os.environ.get("CLANGXX_COMPILER_PATH")
-    if cxx_env:
+    if cxxenv:
         # If it's .../clang++, try sibling clang too
-        if cxx_env.endswith("clang++") and os.path.exists(cxx_env[:-2]):
-            candidates.append(cxx_env[:-2])
-        candidates.append(cxx_env)
+        if cxxenv.endswith("clang++") and os.path.exists(cxxenv[:-2]):
+            candidates.append(cxxenv[:-2])
+        candidates.append(cxxenv)
 
-    # Next: the host compiler we actually call
+    # 2) The compiler we will actually invoke for this action
     if CPU_COMPILER and os.path.basename(CPU_COMPILER) in ("clang", "clang++", "icpx", "icx"):
         candidates.append(CPU_COMPILER)
 
-    # Finally: system PATH
+    # 3) ONEAPI_COMPILER may be clang/icpx
+    if ONEAPI_COMPILER:
+        candidates.append(ONEAPI_COMPILER)
+
+    # 4) System PATH
     sys_clang = shutil.which("clang")
     if sys_clang:
         candidates.append(sys_clang)
@@ -100,7 +109,10 @@ def _detect_resource_dir():
                 return rd
         except Exception:
             pass
-    return ""
+
+    # 5) Last-resort default (only if it exists)
+    default_rd = "/usr/lib/llvm-18/lib/clang/18"
+    return default_rd if os.path.isdir(default_rd) else ""
 
 _CLANG_RES_DIR = _detect_resource_dir()
 RESFLAG = ["-resource-dir", _CLANG_RES_DIR] if _CLANG_RES_DIR else []
@@ -299,8 +311,7 @@ def main():
     parser.add_argument("-sycl_compile", action="store_true")
     parser.add_argument("-link_stage", action="store_true")
     args, leftover = parser.parse_known_args(sys.argv[1:])
-    # Keep standardization (safe no-op if not present)
-    argv = standardize_key_val_args(leftover, "-isystem")
+    argv = standardize_key_val_args(leftover, "-isystem")  # harmless; we inject -resource-dir
     return call_compiler(argv, link=args.link_stage, sycl_compile=args.sycl_compile)
 
 if __name__ == "__main__":
