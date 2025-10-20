@@ -30,7 +30,7 @@ package(
 
 SYCL_TOOLS = {
     "gcc": "wrappers/icpx_wrapper",
-    "cpp": "wrappers/clang++",
+    "cpp": "wrappers/icpx_wrapper",
     "ld": "wrappers/ld",
     "ar": "wrappers/ar_wrapper",
     "gcov": "wrappers/idler",
