@@ -1,9 +1,10 @@
-exports_files(["find_sycl_config.py"])
-
 package(default_visibility = ["//visibility:public"])
+
 exports_files([
+  "find_sycl_config.py",
   "oneapi.NONHERMETIC.BUILD",
   "level_zero.NONHERMETIC.BUILD",
   "zero_loader.NONHERMETIC.BUILD",
 ])
+
 
