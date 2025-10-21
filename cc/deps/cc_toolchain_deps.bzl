@@ -52,6 +52,7 @@ def cc_toolchain_deps():
             dists = {
                 "@sysroot_linux_x86_64_glibc_2_27//:startup_libs": "linux_glibc_2_27",
                 "@sysroot_linux_x86_64_glibc_2_31//:startup_libs": "linux_glibc_2_31",
+                "@sysroot_linux_x86_64_glibc_2_35//:startup_libs": "linux_glibc_2_35",
             },
             build_file_tpl = Label("sysroot_linux.BUILD.tpl"),
         )
@@ -75,6 +76,16 @@ def cc_toolchain_deps():
             urls = tf_mirror_urls("https://storage.googleapis.com/ml-sysroot-testing/sysroot_x86_64_ubuntu20_gcc10-0.1.0.tar.xz"),
             build_file = Label("//cc/config:sysroot_ubuntu20_x86_64_gcc10.BUILD"),
             strip_prefix = "sysroot_x86_64_ubuntu20_gcc10",
+        )
+
+    if "sysroot_linux_x86_64_glibc_2_35" not in native.existing_rules():
+        # C++20 / C++23, manylinux_2_35, gcc-12
+        mirrored_http_archive(
+            name = "sysroot_linux_x86_64_glibc_2_35",
+            sha256 = "a24665b464d8d1e2235690dd77f8a5fd2d7f717afe83208635ae1b25ef5874bf",
+            urls = tf_mirror_urls("https://storage.googleapis.com/ml-sysroot-testing/sysroot_x86_64_ubuntu22_gcc12-0.0.1.tar.xz"),
+            build_file = Label("//cc/config:sysroot_ubuntu22_x86_64_gcc12.BUILD"),
+            strip_prefix = "sysroot_x86_64_ubuntu22_gcc12-0.0.1",
         )
 
     ################################################################
