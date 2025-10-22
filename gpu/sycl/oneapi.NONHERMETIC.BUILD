@@ -9,31 +9,30 @@ load(
     "cc_toolchain_import_feature",
 )
 
-# -- Tools (must be single files; adjust one of the two paths to match your install) --
-# Choose the line that exists on your machine and delete the other.
+# -- Tools (each alias must resolve to ONE existing file) ----------------------
 
-alias(name = "clang",
-      actual = "compiler/2025.1/bin/clang")                 # common layout
-# alias(name = "clang", actual = "compiler/2025.1/bin/compiler/clang")  # alternate
+# Use Intel oneAPI compilers (icx/icpx) to satisfy toolchain single-file contract.
+# Pick the line that exists on your system and delete/comment the other.
 
-alias(name = "clang++",
-      actual = "compiler/2025.1/bin/clang++")
-# alias(name = "clang++", actual = "compiler/2025.1/bin/compiler/clang++")
+alias(name = "clang",   actual = "compiler/2025.1/bin/icx")
+# alias(name = "clang", actual = "compiler/latest/bin/icx")
 
-alias(name = "icpx",
-      actual = "compiler/2025.1/bin/icpx")
+alias(name = "clang++",   actual = "compiler/2025.1/bin/icpx")
+# alias(name = "clang++", actual = "compiler/latest/bin/icpx")
 
-alias(name = "clang-offload-bundler",
-      actual = "compiler/2025.1/bin/clang-offload-bundler")
+# These usually exist; if not, switch to the 'latest' path.
+alias(name = "clang-offload-bundler", actual = "compiler/2025.1/bin/clang-offload-bundler")
+# alias(name = "clang-offload-bundler", actual = "compiler/latest/bin/clang-offload-bundler")
 
-alias(name = "llvm-objcopy",
-      actual = "compiler/2025.1/bin/llvm-objcopy")
+alias(name = "llvm-objcopy", actual = "compiler/2025.1/bin/llvm-objcopy")
+# alias(name = "llvm-objcopy", actual = "compiler/latest/bin/llvm-objcopy")
 
-alias(name = "ld",
-      actual = "compiler/2025.1/bin/ld.lld")
+alias(name = "ld", actual = "compiler/2025.1/bin/ld.lld")
+# alias(name = "ld", actual = "compiler/latest/bin/ld.lld")
 
-alias(name = "ar",
-      actual = "compiler/2025.1/bin/llvm-ar")
+alias(name = "ar", actual = "compiler/2025.1/bin/llvm-ar")
+# alias(name = "ar", actual = "compiler/latest/bin/llvm-ar")
+
 
 
 # Provider stubs used by toolchain config (not referenced by :all to avoid cycles).
