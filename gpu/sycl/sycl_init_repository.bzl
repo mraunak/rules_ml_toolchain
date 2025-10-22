@@ -19,48 +19,48 @@ load("//gpu/sycl:dist_repo.bzl", "dist_repo")
 load("//gpu/sycl:sycl_redist_versions.bzl", "BUILD_TEMPLATES", "REDIST_DICT")
 
 def sycl_init_repository(
-        hermetic = True,
-        oneapi_root = "/opt/intel/oneapi",
-        level_zero_root = "/usr",
-        zero_loader_root = "/usr",
-        redist_dict = REDIST_DICT,
-        build_templates = BUILD_TEMPLATES):
-    """Initializes SYCL repos. hermetic=True uses dist_repo; else new_local_repository."""
-
+    hermetic = True,
+    oneapi_root = "/opt/intel/oneapi",
+    level_zero_root = "/usr",
+    zero_loader_root = "/usr",
+    redist_dict = REDIST_DICT,
+    build_templates = BUILD_TEMPLATES):
+    """Initializes SYCL repos. hermetic=True uses dist_repo (materialized); 
+    hermetic=False uses new_local_repository (OS/local install)."""
+    
     if hermetic:
-        # Download & materialize each redist using the versioned tables.
+        # Hermetic case: Download & materialize each redist using versioned tables (dist_repo).
         for dist_name, _ in redist_dict.items()[::-1]:
-            if dist_name not in build_templates:
-                fail("No build template mapping for '{}'".format(dist_name))
             bt = build_templates[dist_name]
             dist_repo(
                 name = dist_name,
                 distrs = redist_dict[dist_name],
                 build_templates = bt["version_to_template"],
             )
-        return
+    else:
+        # Non-hermetic case: Create repository links to the local OS installation 
+        # using new_local_repository.
+        
+        # Setup oneAPI repository link
+        if not native.existing_rule("oneapi"):
+            native.new_local_repository(
+                name = "oneapi",
+                path = oneapi_root,  # e.g. /opt/intel/oneapi
+                build_file = "@rules_ml_toolchain//gpu/sycl:oneapi.NONHERMETIC.BUILD",
+            )
 
-    # -------------------------
-    # Non-hermetic (system installs)
-    # -------------------------
-    # Create the three repos (idempotent: skip if already declared).
-    if not native.existing_rule("oneapi"):
-        native.new_local_repository(
-            name = "oneapi",
-            path = oneapi_root,  # MUST be /opt/intel/oneapi (no version)
-            build_file = "@rules_ml_toolchain//gpu/sycl:oneapi.NONHERMETIC.BUILD",
-        )
+        # Setup Level Zero repository link
+        if not native.existing_rule("level_zero"):
+            native.new_local_repository(
+                name = "level_zero",
+                path = level_zero_root,  # e.g. /usr
+                build_file = "@rules_ml_toolchain//gpu/sycl:level_zero.NONHERMETIC.BUILD",
+            )
 
-    if not native.existing_rule("level_zero"):
-        native.new_local_repository(
-            name = "level_zero",
-            path = level_zero_root,  # /usr
-            build_file = "@rules_ml_toolchain//gpu/sycl:level_zero.NONHERMETIC.BUILD",
-        )
-
-    if not native.existing_rule("zero_loader"):
-        native.new_local_repository(
-            name = "zero_loader",
-            path = zero_loader_root,  # /usr
-            build_file = "@rules_ml_toolchain//gpu/sycl:zero_loader.NONHERMETIC.BUILD",
-        )
+        # Setup Zero Loader repository link
+        if not native.existing_rule("zero_loader"):
+            native.new_local_repository(
+                name = "zero_loader",
+                path = zero_loader_root,  # e.g. /usr
+                build_file = "@rules_ml_toolchain//gpu/sycl:zero_loader.NONHERMETIC.BUILD",
+            )
