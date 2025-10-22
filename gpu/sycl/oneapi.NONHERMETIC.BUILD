@@ -18,7 +18,7 @@ filegroup(name = "llvm-objcopy",          srcs = ["compiler/2025.1/bin/llvm-objc
 filegroup(name = "ld",                    srcs = ["compiler/2025.1/bin/ld.lld"])
 filegroup(name = "ar",                    srcs = ["compiler/2025.1/bin/llvm-ar"])
 
-# Provider stubs as required by toolchain; content can be empty in non-hermetic.
+# Provider stubs used by toolchain config (not referenced by :all to avoid cycles).
 cc_toolchain_import(name = "includes")
 cc_toolchain_import(name = "core")
 cc_toolchain_import(name = "libclang_rt")
@@ -30,17 +30,17 @@ cc_toolchain_import_feature(
     toolchain_import = ":includes",
 )
 
-# -- Headers: NO GLOBS. Just add include dirs (gives -I flags) ----------------
+# -- Headers for normal code: NO GLOBS; just add include dirs (gives -I flags).
 cc_library(
     name = "headers",
-    hdrs = [],  # do not enumerate files; avoids recursive symlink traversal
+    hdrs = [],
     includes = [
-        "compiler/2025.1/include",  # adjust to your installed version
+        "compiler/2025.1/include",  # adjust to your installed version or use 'latest'
         "mkl/2025.1/include",
     ],
 )
 
-# -- Libs: NO GLOBS. Provide -L/-rpath and link by soname ---------------------
+# -- Libs for normal code: NO GLOBS; provide -L/-rpath and link by soname.
 cc_library(
     name = "libs",
     srcs = [],
@@ -53,12 +53,10 @@ cc_library(
     ],
 )
 
-# -- Aggregator needed by some toolchains (e.g., @oneapi//:all) ----------------
+# -- Toolchain aggregator: FILES ONLY (no cc_library / no cc_toolchain_import) --
 filegroup(
     name = "all",
     srcs = [
-        ":headers",
-        ":libs",
         ":clang",
         ":clang++",
         ":icpx",
@@ -66,10 +64,7 @@ filegroup(
         ":llvm-objcopy",
         ":ld",
         ":ar",
-        ":includes",
-        ":core",
-        ":libclang_rt",
-        ":mkl",
-        ":binaries",
+        # Intentionally NOT including :headers, :libs, :includes, :core, :libclang_rt, :mkl, :binaries
+        # to avoid introducing CcInfo/providers into the toolchain dependency graph.
     ],
 )
