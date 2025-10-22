@@ -1,4 +1,3 @@
-
 package(default_visibility = ["//visibility:public"])
 
 load(
@@ -51,5 +50,26 @@ cc_library(
         "-lmkl_intel_ilp64",
         "-lmkl_core",
         "-lmkl_sequential",
+    ],
+)
+
+# -- Aggregator needed by some toolchains (e.g., @oneapi//:all) ----------------
+filegroup(
+    name = "all",
+    srcs = [
+        ":headers",
+        ":libs",
+        ":clang",
+        ":clang++",
+        ":icpx",
+        ":clang-offload-bundler",
+        ":llvm-objcopy",
+        ":ld",
+        ":ar",
+        ":includes",
+        ":core",
+        ":libclang_rt",
+        ":mkl",
+        ":binaries",
     ],
 )
