@@ -14,24 +14,28 @@ load(
 # Use Intel oneAPI compilers (icx/icpx) to satisfy toolchain single-file contract.
 # Pick the line that exists on your system and delete/comment the other.
 
-alias(name = "clang",   actual = "compiler/2025.1/bin/icx")
-# alias(name = "clang", actual = "compiler/latest/bin/icx")
+alias(name = "clang",   actual = "compiler/2025.1/bin/compiler/clang")
+# alias(name = "clang", actual = "compiler/latest/bin/compiler/clang")
 
-alias(name = "clang++",   actual = "compiler/2025.1/bin/icpx")
-# alias(name = "clang++", actual = "compiler/latest/bin/icpx")
+alias(name = "clang++",   actual = "compiler/2025.1/bin/compiler/clang++")
+# alias(name = "clang++", actual = "compiler/latest/bin/compiler/clang++")
 
 # These usually exist; if not, switch to the 'latest' path.
-alias(name = "clang-offload-bundler", actual = "compiler/2025.1/bin/clang-offload-bundler")
-# alias(name = "clang-offload-bundler", actual = "compiler/latest/bin/clang-offload-bundler")
+alias(name = "clang-offload-bundler", actual = "compiler/2025.1/bin/compiler/clang-offload-bundler")
+# alias(name = "clang-offload-bundler", actual = "compiler/latest/bin/compiler/clang-offload-bundler")
 
-alias(name = "llvm-objcopy", actual = "compiler/2025.1/bin/llvm-objcopy")
-# alias(name = "llvm-objcopy", actual = "compiler/latest/bin/llvm-objcopy")
+alias(name = "llvm-objcopy", actual = "compiler/2025.1/bin/compiler/llvm-objcopy")
+# alias(name = "llvm-objcopy", actual = "compiler/latest/bin/compiler/llvm-objcopy")
 
-alias(name = "ld", actual = "compiler/2025.1/bin/ld.lld")
-# alias(name = "ld", actual = "compiler/latest/bin/ld.lld")
+alias(name = "ld", actual = "compiler/2025.1/bin/compiler/ld.lld")
+# alias(name = "ld", actual = "compiler/latest/bin/compiler/ld.lld")
 
-alias(name = "ar", actual = "compiler/2025.1/bin/llvm-ar")
-# alias(name = "ar", actual = "compiler/latest/bin/llvm-ar")
+alias(name = "ar", actual = "compiler/2025.1/bin/compiler/llvm-ar")
+# alias(name = "ar", actual = "compiler/latest/bin/compiler/llvm-ar")
+
+alias(name = "icpx", actual = "compiler/2025.1/bin/icpx")
+
+alias(name = "asan_ignorelist", actual = "compiler/2025.1/lib/clang/20/share/asan_ignorelist.txt")
 
 
 
