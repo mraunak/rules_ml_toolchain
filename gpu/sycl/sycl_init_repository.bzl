@@ -38,27 +38,23 @@ def sycl_init_repository(
             )
         return
 
-    # -------------------------
-    # Non-hermetic (system installs)
-    # -------------------------
-    # Fail fast if repos were declared earlier in the load chain.
-    if (native.existing_rule("oneapi") or
-        native.existing_rule("level_zero") or
-        native.existing_rule("zero_loader")):
-        fail("oneapi/level_zero/zero_loader already declared elsewhere ")
-
-    native.new_local_repository(
+    if not native.existing_rule("oneapi"):
+     native.new_local_repository(
         name = "oneapi",
-        path = oneapi_root,  # e.g. /opt/intel/oneapi
+        path = oneapi_root,  # MUST be /opt/intel/oneapi (no version)
         build_file = "@rules_ml_toolchain//gpu/sycl:oneapi.NONHERMETIC.BUILD",
     )
+
+   if not native.existing_rule("level_zero"):
     native.new_local_repository(
         name = "level_zero",
-        path = level_zero_root,  # e.g. /usr
+        path = level_zero_root,  # /usr
         build_file = "@rules_ml_toolchain//gpu/sycl:level_zero.NONHERMETIC.BUILD",
     )
+
+  if not native.existing_rule("zero_loader"):
     native.new_local_repository(
         name = "zero_loader",
-        path = zero_loader_root,  # e.g. /usr
+        path = zero_loader_root,  # /usr
         build_file = "@rules_ml_toolchain//gpu/sycl:zero_loader.NONHERMETIC.BUILD",
     )
