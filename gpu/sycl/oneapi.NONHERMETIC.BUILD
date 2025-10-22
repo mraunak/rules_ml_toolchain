@@ -9,14 +9,66 @@ load(
     "cc_toolchain_import_feature",
 )
 
-# -- Tools (no globs) ---------------------------------------------------------
-filegroup(name = "clang",                 srcs = ["compiler/2025.1/bin/clang"])
-filegroup(name = "clang++",               srcs = ["compiler/2025.1/bin/clang++"])
-filegroup(name = "icpx",                  srcs = ["compiler/2025.1/bin/icpx"])
-filegroup(name = "clang-offload-bundler", srcs = ["compiler/2025.1/bin/clang-offload-bundler"])
-filegroup(name = "llvm-objcopy",          srcs = ["compiler/2025.1/bin/llvm-objcopy"])
-filegroup(name = "ld",                    srcs = ["compiler/2025.1/bin/ld.lld"])
-filegroup(name = "ar",                    srcs = ["compiler/2025.1/bin/llvm-ar"])
+filegroup(
+    name = "clang",
+    srcs = glob([
+        "compiler/2025.1/bin/clang",
+        "compiler/2025.1/bin/compiler/clang",
+        "compiler/latest/bin/clang",
+        "compiler/latest/bin/compiler/clang",
+    ]),
+)
+
+filegroup(
+    name = "clang++",
+    srcs = glob([
+        "compiler/2025.1/bin/clang++",
+        "compiler/2025.1/bin/compiler/clang++",
+        "compiler/latest/bin/clang++",
+        "compiler/latest/bin/compiler/clang++",
+    ]),
+)
+
+filegroup(
+    name = "icpx",
+    srcs = glob([
+        "compiler/2025.1/bin/icpx",
+        "compiler/latest/bin/icpx",
+    ]),
+)
+
+filegroup(
+    name = "clang-offload-bundler",
+    srcs = glob([
+        "compiler/2025.1/bin/clang-offload-bundler",
+        "compiler/latest/bin/clang-offload-bundler",
+    ]),
+)
+
+filegroup(
+    name = "llvm-objcopy",
+    srcs = glob([
+        "compiler/2025.1/bin/llvm-objcopy",
+        "compiler/latest/bin/llvm-objcopy",
+    ]),
+)
+
+filegroup(
+    name = "ld",
+    srcs = glob([
+        "compiler/2025.1/bin/ld.lld",
+        "compiler/latest/bin/ld.lld",
+    ]),
+)
+
+filegroup(
+    name = "ar",
+    srcs = glob([
+        "compiler/2025.1/bin/llvm-ar",
+        "compiler/latest/bin/llvm-ar",
+    ]),
+)
+
 
 # Provider stubs used by toolchain config (not referenced by :all to avoid cycles).
 cc_toolchain_import(name = "includes")
