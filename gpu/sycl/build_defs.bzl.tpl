@@ -13,14 +13,8 @@
 # limitations under the License.
 # ==============================================================================
 
-# Macros for building SYCL code.
 def if_sycl(if_true, if_false = []):
-    """Shorthand for select()'ing on whether we're building with SYCL.
-
-    Returns a select statement which evaluates to if_true if we're building
-    with SYCL enabled.  Otherwise, the select statement evaluates to if_false.
-
-    """
+    """Select on --config=sycl."""
     return select({
         "@rules_ml_toolchain//common:is_sycl_enabled": if_true,
         "//conditions:default": if_false,
@@ -28,41 +22,41 @@ def if_sycl(if_true, if_false = []):
 
 def sycl_default_copts():
     """Default options for all SYCL compilations."""
-    return if_sycl(["-sycl_compile","-DTENSORFLOW_USE_SYCL=1","-DMKL_ILP64","-fPIC"])
+    return if_sycl([
+        "-sycl_compile",
+        "-DTENSORFLOW_USE_SYCL=1",
+        "-DMKL_ILP64",
+        "-fPIC",
+    ])
 
 def sycl_default_linkopts():
-    """Default options for all SYCL compilations."""
+    """Default link options for all SYCL compilations."""
     return if_sycl(["-link_stage", "-lirc"])
 
 def sycl_build_is_configured():
-    """Returns true if SYCL compiler was enabled during the configure process."""
+    """True iff SYCL was enabled during configure (templated)."""
     return %{sycl_build_is_configured}
 
 def if_sycl_is_configured(x):
-    """Tests if the SYCL was enabled during the configure proces "-fPIC"s.
-
-    Unlike if_sycl(), this does not require that we are building with
-    --config=sycl. Used to allow non-SYCL code to depend on SYCL libraries.
-    """
+    """True at *configure* time (independent of --config=sycl)."""
     if %{sycl_is_configured}:
-      return select({"//conditions:default": x})
+        return select({"//conditions:default": x})
     return select({"//conditions:default": []})
 
 def if_sycl_build_is_configured(x, y):
-    if sycl_build_is_configured():
-      return x
-    return y
+    return x if sycl_build_is_configured() else y
 
 def sycl_library(copts = [], linkopts = [], tags = [], deps = [], **kwargs):
-    """Wrapper over cc_library which adds default SYCL options."""
-    native.cc_library(copts = sycl_default_copts() + copts,
-                      linkopts = sycl_default_linkopts() + linkopts,
-                      tags = tags + ["gpu"],
-                      deps = deps + if_sycl_is_configured([
-                      "@local_config_sycl//sycl:sycl_headers",
-                      "@local_config_sycl//sycl:level_zero_headers",
-                      "@local_config_sycl//sycl:oneapi_libs",
-                      "@local_config_sycl//sycl:ze_loader",
-                      ]),
-                  **kwargs
+    """cc_library wrapper that injects SYCL defaults and façade deps."""
+    native.cc_library(
+        copts    = sycl_default_copts()    + copts,
+        linkopts = sycl_default_linkopts() + linkopts,
+        tags     = tags + ["gpu"],
+        deps     = deps + if_sycl_is_configured([
+            "@local_config_sycl//sycl:sycl_headers",
+            "@local_config_sycl//sycl:level_zero_headers",
+            "@local_config_sycl//sycl:oneapi_libs",
+            "@local_config_sycl//sycl:ze_loader",
+        ]),
+        **kwargs
     )
