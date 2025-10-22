@@ -26,6 +26,7 @@ def sycl_init_repository(
         redist_dict = REDIST_DICT,
         build_templates = BUILD_TEMPLATES):
     """Initializes SYCL repos. hermetic=True uses dist_repo; else new_local_repository."""
+
     if hermetic:
         # Download & materialize each redist using the versioned tables.
         for dist_name, _ in redist_dict.items()[::-1]:
@@ -37,23 +38,28 @@ def sycl_init_repository(
             )
         return
 
-    if not native.existing_rule("oneapi"):
-        native.new_local_repository(
-            name = "oneapi",
-            path = oneapi_root,  # e.g. /opt/intel/oneapi
-            build_file = "@rules_ml_toolchain//gpu/sycl:oneapi.NONHERMETIC.BUILD",
-        )
+    # -------------------------
+    # Non-hermetic (system installs)
+    # -------------------------
+    # If any of these were declared earlier, that's a config error; fail fast.
+    if (native.existing_rule("oneapi") or
+        native.existing_rule("level_zero") or
+        native.existing_rule("zero_loader")):
+        fail("oneapi/level_zero/zero_loader already declared elsewhere. "
+             "Remove earlier sycl_init_repository() calls (e.g., in workspace2.bzl:_tf_toolchains()).")
 
-    if not native.existing_rule("level_zero"):
-        native.new_local_repository(
-            name = "level_zero",
-            path = level_zero_root,  # e.g. /usr
-            build_file = "@rules_ml_toolchain//gpu/sycl:level_zero.NONHERMETIC.BUILD",
-        )
-
-    if not native.existing_rule("zero_loader"):
-        native.new_local_repository(
-            name = "zero_loader",
-            path = zero_loader_root,  # e.g. /usr
-            build_file = "@rules_ml_toolchain//gpu/sycl:zero_loader.NONHERMETIC.BUILD",
-        )
+    native.new_local_repository(
+        name = "oneapi",
+        path = oneapi_root,  # e.g. /opt/intel/oneapi
+        build_file = "@rules_ml_toolchain//gpu/sycl:oneapi.NONHERMETIC.BUILD",
+    )
+    native.new_local_repository(
+        name = "level_zero",
+        path = level_zero_root,  # e.g. /usr
+        build_file = "@rules_ml_toolchain//gpu/sycl:level_zero.NONHERMETIC.BUILD",
+    )
+    native.new_local_repository(
+        name = "zero_loader",
+        path = zero_loader_root,  # e.g. /usr
+        build_file = "@rules_ml_toolchain//gpu/sycl:zero_loader.NONHERMETIC.BUILD",
+    )
