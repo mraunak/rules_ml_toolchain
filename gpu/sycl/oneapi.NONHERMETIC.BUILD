@@ -43,7 +43,7 @@ alias(name = "asan_ignorelist", actual = "compiler/2025.1/lib/clang/20/share/asa
 # Provider stubs used by toolchain config (not referenced by :all to avoid cycles).
 cc_toolchain_import(
     name = "includes",
-    includes = NONHERMETIC_INCLUDES,
+    builtin_include_directories = NONHERMETIC_INCLUDES,
 )
 cc_toolchain_import(name = "core")
 cc_toolchain_import(name = "libclang_rt")
