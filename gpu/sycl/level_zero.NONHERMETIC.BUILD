@@ -1,11 +1,21 @@
 package(default_visibility = ["//visibility:public"])
 
-# Most distros install headers in /usr/include/level_zero
+# Expose Level Zero headers for includes like <level_zero/ze_api.h>.
+# When you call:
+#   new_local_repository(name = "level_zero", path = "/usr", build_file = "..."),
+# this adds -I/usr/include so <level_zero/...> resolves without enumerating files.
 cc_library(
     name = "headers",
-    hdrs = glob(["include/level_zero/**"]),
-    includes = ["include/level_zero/.."],  # adds /usr/include
+    hdrs = glob([
+        "include/level_zero/**",   # will be empty if the dir doesn't exist; that's OK
+    ]),
+    includes = [
+        "include",                 # adds -I<repo_root>/include (e.g. -I/usr/include)
+    ],
 )
 
-# Export an :all target since some toolchains aggregate it
-filegroup(name = "all", srcs = ["include/level_zero"])
+# Some toolchains aggregate :all; forward it to the headers target.
+filegroup(
+    name = "all",
+    srcs = [":headers"],
+)
