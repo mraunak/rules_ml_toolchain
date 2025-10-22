@@ -16,23 +16,7 @@
 
 package(default_visibility = ["//visibility:public"])
 
-# Forward to vendor repos (hermetic: dist_repo; non-hermetic: new_local_repository)
-alias(
-    name = "sycl_headers",
-    actual = "@oneapi//:headers",
-)
-
-alias(
-    name = "level_zero_headers",
-    actual = "@level_zero//:headers",
-)
-
-alias(
-    name = "oneapi_libs",
-    actual = "@oneapi//:libs",
-)
-
-alias(
-    name = "ze_loader",
-    actual = "@zero_loader//:libze_loader",
-)
+alias(name="sycl_headers",       actual="@oneapi//:headers")
+alias(name="level_zero_headers", actual="@level_zero//:headers")
+alias(name="oneapi_libs",        actual="@oneapi//:libs")
+alias(name="ze_loader",          actual="@zero_loader//:libze_loader")
