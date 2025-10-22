@@ -16,3 +16,14 @@ cc_library(
         "-lze_loader",
     ],
 )
+
+# Toolchain aggregator: **FILES ONLY** (no CcInfo) to avoid toolchain cycles.
+# You can keep it empty or include the .so files as plain files; both are safe.
+filegroup(
+    name = "all",
+    srcs = glob([
+        "lib/x86_64-linux-gnu/libze_loader.so*",
+        "lib64/libze_loader.so*",
+        "lib/libze_loader.so*",
+    ]),
+)
