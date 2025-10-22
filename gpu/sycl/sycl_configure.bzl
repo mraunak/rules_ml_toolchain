@@ -90,6 +90,27 @@ def _sycl_configure_impl(ctx):
 
     # Make repo root a Bazel package
     ctx.file("BUILD", "")
+ def _emit_nonhermetic_includes(repository_ctx):
+    incs = []
+    # clang resource
+    clang = repository_ctx.which("clang") or repository_ctx.which("icpx")
+    if clang:
+        r = repository_ctx.execute([clang, "-print-resource-dir"])
+        if r.return_code == 0:
+            incs.append(repository_ctx.path(r.stdout.strip() + "/include").realpath)
+    # system
+    incs.append("/usr/include")
+    # gcc include/include-fixed
+    gcc = repository_ctx.which("gcc")
+    if gcc:
+        r = repository_ctx.execute([gcc, "-print-libgcc-file-name"])
+        if r.return_code == 0:
+            verdir = repository_ctx.path(r.stdout.strip()).dirname
+            incs.append(str(verdir) + "/include")
+            incs.append(str(verdir) + "/include-fixed")
+
+    repository_ctx.file("nonhermetic_includes.bzl", "NONHERMETIC_INCLUDES = " + repr(incs) + "\n")
+
 
 sycl_configure = repository_rule(
     implementation = _sycl_configure_impl,
