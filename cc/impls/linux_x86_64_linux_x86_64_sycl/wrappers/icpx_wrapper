@@ -69,11 +69,13 @@ def _pick_host_cc():
       return p
   return None
 
-# Default CPU_COMPILER from env; override to host for non-hermetic host flow
+HOST_CXX = _pick_host_cxx()
+HOST_CC  = _pick_host_cc()
+
+# Default CPU_COMPILER from env; override to host C++ driver when available
 CPU_COMPILER = os.environ.get('GCC_PATH', '')
-host_cxx = _pick_host_cxx()
-if host_cxx:
-  CPU_COMPILER = host_cxx
+if HOST_CXX:
+  CPU_COMPILER = HOST_CXX
 
 # Respect AR_PATH from env; fallback to which
 AR_PATH = os.environ.get('AR_PATH')
@@ -144,9 +146,7 @@ def maybe_add_gcc_toolchain(flags):
   return flags + ['--gcc-toolchain=' + toolchain_root]
 
 def apply_nonhermetic(flags):
-  """
-  Always scrub (this wrapper is the non-hermetic variant), and add a GCC hint.
-  """
+  """Always scrub (this wrapper is the non-hermetic variant) and add a GCC hint."""
   f = sanitize_nonhermetic_flags(flags)
   f = maybe_add_gcc_toolchain(f)
   return f
@@ -162,6 +162,36 @@ def system(cmd):
     return os.WEXITSTATUS(ret)
   else:
     return -os.WTERMSIG(ret)
+
+def _infer_lang(args_c_list, all_flags):
+  """
+  Return 'c' or 'c++' for host compilation.
+  Priority:
+    1) explicit -x c / -x c++ if present
+    2) file extension (.c => c; .cc/.cpp/.cxx => c++)
+    3) fallback to c++
+  """
+  # Honor explicit -x first
+  for i, tok in enumerate(all_flags):
+    if tok == '-x' and i + 1 < len(all_flags):
+      lang = all_flags[i+1].strip()
+      if lang in ('c', 'c++', 'c-header', 'c++-header'):
+        return 'c' if lang == 'c' or lang == 'c-header' else 'c++'
+    if tok.startswith('-x'):
+      lang = tok[2:].strip()
+      if lang in ('c', 'c++', 'c-header', 'c++-header'):
+        return 'c' if lang == 'c' or lang == 'c-header' else 'c++'
+
+  # Infer from extension (we expect single input with -c)
+  if args_c_list and len(args_c_list[0]) == 1:
+    src = args_c_list[0][0]
+    if src.endswith('.c'):
+      return 'c'
+    if src.endswith(('.cc', '.cpp', '.cxx', '.C', '.CPP')):
+      return 'c++'
+
+  # Fallback
+  return 'c++'
 
 # --- Main driver --------------------------------------------------------------
 
@@ -316,12 +346,26 @@ def call_compiler(argv, link=False, sycl_compile=True):
       out_files.append('-o')
       out_files.extend(args.o[0])
 
+    # Decide C vs C++ for the TU
+    lang = _infer_lang(args.c, flags)
+
     flags += (common_flags + in_files + out_files)
     flags = apply_nonhermetic(flags)
 
+    # Choose the right driver: C for .c, C++ otherwise
+    driver = CPU_COMPILER
+    if lang == 'c' and HOST_CC:
+      driver = HOST_CC
+
+    # As a last resort, force language if the chosen driver is a C++ driver
+    extra_lang = []
+    base = os.path.basename(driver)
+    if lang == 'c' and (base.endswith('++') or 'clang++' in base):
+      extra_lang = ['-x', 'c']
+
     if VERBOSE:
-      print(' '.join([CPU_COMPILER] + flags))
-    return subprocess.call([CPU_COMPILER] + flags)
+      print(' '.join([driver] + extra_lang + flags))
+    return subprocess.call([driver] + extra_lang + flags)
 
 # --- Arg normalization & entrypoint ------------------------------------------
 
