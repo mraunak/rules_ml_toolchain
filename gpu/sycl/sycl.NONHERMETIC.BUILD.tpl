@@ -10,13 +10,13 @@ load(
 )
 
 # -- Tools (no globs) ---------------------------------------------------------
-filegroup(name = "clang",                 srcs = ["compiler/2025.2/bin/clang"])
-filegroup(name = "clang++",               srcs = ["compiler/2025.2/bin/clang++"])
-filegroup(name = "icpx",                  srcs = ["compiler/2025.2/bin/icpx"])
-filegroup(name = "clang-offload-bundler", srcs = ["compiler/2025.2/bin/clang-offload-bundler"])
-filegroup(name = "llvm-objcopy",          srcs = ["compiler/2025.2/bin/llvm-objcopy"])
-filegroup(name = "ld",                    srcs = ["compiler/2025.2/bin/ld.lld"])
-filegroup(name = "ar",                    srcs = ["compiler/2025.2/bin/llvm-ar"])
+filegroup(name = "clang",                 srcs = ["compiler/2025.1/bin/clang"])
+filegroup(name = "clang++",               srcs = ["compiler/2025.1/bin/clang++"])
+filegroup(name = "icpx",                  srcs = ["compiler/2025.1/bin/icpx"])
+filegroup(name = "clang-offload-bundler", srcs = ["compiler/2025.1/bin/clang-offload-bundler"])
+filegroup(name = "llvm-objcopy",          srcs = ["compiler/2025.1/bin/llvm-objcopy"])
+filegroup(name = "ld",                    srcs = ["compiler/2025.1/bin/ld.lld"])
+filegroup(name = "ar",                    srcs = ["compiler/2025.1/bin/llvm-ar"])
 
 # Provider stubs as required by toolchain; content can be empty in non-hermetic.
 cc_toolchain_import(name = "includes")
@@ -46,7 +46,7 @@ cc_library(
     srcs = [],
     linkopts = [
         "-Lmkl/2025.1/lib/intel64",            # adjust if your libdir differs
-        "-Wl,-rpath,mkl/2025.2/lib/intel64",
+        "-Wl,-rpath,mkl/2025.1/lib/intel64",
         "-lmkl_intel_ilp64",
         "-lmkl_core",
         "-lmkl_sequential",
