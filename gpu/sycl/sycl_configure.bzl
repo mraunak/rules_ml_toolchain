@@ -20,6 +20,23 @@
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+# Copyright 2025 Google LLC
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+#     https://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+"""Repository rule for SYCL autoconfiguration.
+
+`sycl_configure` depends on:
+  * TF_NEED_SYCL: enable building with SYCL
+"""
+
 def enable_sycl(ctx):
     return bool(ctx.getenv("TF_NEED_SYCL", "").strip())
 
@@ -101,18 +118,16 @@ def _emit_nonhermetic_includes(ctx):
         r = ctx.execute([p, "-print-resource-dir"])
         if r.return_code == 0:
             rd = r.stdout.strip()
-            _add_if_dir(rd + "/include")
-            # Debian/Ubuntu alias path: /usr/lib/clang/<ver>/include
-            parts = rd.strip("/").split("/")
-            if len(parts) >= 2 and parts[-2] == "clang":
-                # already /.../clang/<ver>
+            if rd:
                 _add_if_dir(rd + "/include")
-            elif "lib/clang" in rd:
-                try:
+                # Debian/Ubuntu alias path: /usr/lib/clang/<ver>/include
+                parts = rd.strip("/").split("/")
+                ver = ""
+                if parts:
                     ver = parts[-1]
-                    _add_if_dir("/usr/lib/clang/{}/include".format(ver))
-                except Exception:
-                    pass
+                    # Handle .../lib/clang/<ver> and .../clang/<ver>
+                    if ver and ver[0].isdigit():
+                        _add_if_dir("/usr/lib/clang/" + ver + "/include")
 
     # 3) System headers
     _add_if_dir("/usr/include")
@@ -122,9 +137,11 @@ def _emit_nonhermetic_includes(ctx):
     if gcc:
         r = ctx.execute([gcc, "-print-libgcc-file-name"])
         if r.return_code == 0:
-            verdir = ctx.path(r.stdout.strip()).dirname  # .../lib/gcc/<triple>/<ver>
-            _add_if_dir(str(verdir) + "/include")
-            _add_if_dir(str(verdir) + "/include-fixed")
+            libgcc = r.stdout.strip()
+            if libgcc:
+                verdir = ctx.path(libgcc).dirname  # .../lib/gcc/<triple>/<ver>
+                _add_if_dir(str(verdir) + "/include")
+                _add_if_dir(str(verdir) + "/include-fixed")
 
     # De-dup while preserving order
     seen = {}
@@ -134,13 +151,16 @@ def _emit_nonhermetic_includes(ctx):
             seen[p] = True
             incs_dedup.append(p)
 
-    ctx.file("nonhermetic_includes.bzl",
-             "NONHERMETIC_INCLUDES = " + repr(incs_dedup) + "\n")
-
+    ctx.file(
+        "nonhermetic_includes.bzl",
+        "NONHERMETIC_INCLUDES = " + repr(incs_dedup) + "\n",
+    )
 
 def _sycl_configure_impl(ctx):
     if not enable_sycl(ctx):
         _create_dummy_repository(ctx)
+        # Also emit an empty includes file so load() never fails.
+        ctx.file("nonhermetic_includes.bzl", "NONHERMETIC_INCLUDES = []\n")
         return
 
     # SYCL is enabled: bake True/True in defs
@@ -159,13 +179,11 @@ def _sycl_configure_impl(ctx):
     # Make repo root a Bazel package
     ctx.file("BUILD", "")
 
-    # NEW: Emit host include roots for non-hermetic builds so the toolchain
-    # treats them as "builtin" (prevents absolute-path include errors).
+    # Emit host include roots for non-hermetic builds; write empty otherwise.
     if ctx.getenv("SYCL_BUILD_HERMETIC", "1") == "0":
         _emit_nonhermetic_includes(ctx)
     else:
         ctx.file("nonhermetic_includes.bzl", "NONHERMETIC_INCLUDES = []\n")
-
 
 sycl_configure = repository_rule(
     implementation = _sycl_configure_impl,
