@@ -1,21 +1,20 @@
 package(default_visibility = ["//visibility:public"])
 
-# Expose Level Zero headers for includes like <level_zero/ze_api.h>.
-# When you call:
-#   new_local_repository(name = "level_zero", path = "/usr", build_file = "..."),
-# this adds -I/usr/include so <level_zero/...> resolves without enumerating files.
-cc_library(
-    name = "headers",
-    hdrs = glob([
-        "include/level_zero/**",   # will be empty if the dir doesn't exist; that's OK
-    ]),
-    includes = [
-        "include",                 # adds -I<repo_root>/include (e.g. -I/usr/include)
-    ],
+# 1) Plain files (NO CcInfo)
+filegroup(
+    name = "headers_files",
+    srcs = glob(["include/level_zero/**"]),
 )
 
-# Some toolchains aggregate :all; forward it to the headers target.
+# 2) For normal code (facade points here)
+cc_library(
+    name = "headers",
+    hdrs = glob(["include/level_zero/**"]),
+    includes = ["include"],   # adds -I/usr/include → <level_zero/...> works
+)
+
+# 3) Toolchain aggregation (files ONLY)
 filegroup(
     name = "all",
-    srcs = [":headers"],
+    srcs = [":headers_files"],
 )
