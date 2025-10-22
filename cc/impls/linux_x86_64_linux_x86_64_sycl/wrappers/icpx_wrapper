@@ -39,9 +39,6 @@ import shutil
 ONEAPI_LIBRARY_PATH = os.environ['ONEAPI_LIBRARY_PATH']
 ONEAPI_VERSION = os.environ['ONEAPI_VERSION']
 
-# Non-hermetic when SYCL_BUILD_HERMETIC=0
-NON_HERMETIC = os.environ.get('SYCL_BUILD_HERMETIC', '1') == '0'
-
 def check_is_intel_llvm(path):
   cmd = path + " -dM -E -x c /dev/null | grep '__INTEL_LLVM_COMPILER'"
   check_result = subprocess.getoutput(cmd)
@@ -57,7 +54,7 @@ if not os.path.exists(ONEAPI_COMPILER):
       )
     )
 
-# Prefer host compilers for non-hermetic host steps
+# Prefer host compilers for host steps (non-hermetic)
 def _pick_host_cxx():
   for cand in ('clang++', 'c++', 'g++'):
     p = shutil.which(cand)
@@ -72,12 +69,11 @@ def _pick_host_cc():
       return p
   return None
 
-# Default CPU_COMPILER from env; override for non-hermetic host flow
-CPU_COMPILER = os.environ['GCC_PATH']   # In your setup this is a Clang path
-if NON_HERMETIC:
-  host_cxx = _pick_host_cxx()
-  if host_cxx:
-    CPU_COMPILER = host_cxx
+# Default CPU_COMPILER from env; override to host for non-hermetic host flow
+CPU_COMPILER = os.environ.get('GCC_PATH', '')
+host_cxx = _pick_host_cxx()
+if host_cxx:
+  CPU_COMPILER = host_cxx
 
 # Respect AR_PATH from env; fallback to which
 AR_PATH = os.environ.get('AR_PATH')
@@ -87,7 +83,9 @@ if not AR_PATH:
     raise RuntimeError("ar not found or invalid")
   AR_PATH = found_ar
 
-# --- Non-hermetic helpers -----------------------------------------------------
+VERBOSE = os.environ.get("ONEAPI_VERBOSE", "0") == "1"
+
+# --- Non-hermetic scrubbing ---------------------------------------------------
 
 def _strip_next_arg(flags, i):
   """Remove flags[i] and flags[i+1] if present (for '--sysroot <arg>' style)."""
@@ -98,31 +96,27 @@ def _strip_next_arg(flags, i):
 
 def sanitize_nonhermetic_flags(flags):
   """
-  Remove flags that strip system/builtin includes or force a foreign sysroot.
+  Unconditionally remove flags that break host std headers in non-hermetic mode:
+    - -nostdinc / -nostdinc++
+    - --sysroot[=...] / -isysroot[=...]
   """
   f = list(flags)
+  removed = []
   i = 0
   while i < len(f):
     tok = f[i]
-    # Drop -nostdinc / -nostdinc++
     if tok in ('-nostdinc', '-nostdinc++'):
-      del f[i]
-      continue
-    # Drop --sysroot=/path or --sysroot /path
-    if tok == '--sysroot':
-      f = _strip_next_arg(f, i)
-      continue
-    if tok.startswith('--sysroot='):
-      del f[i]
-      continue
-    # Drop -isysroot=/path or -isysroot /path
-    if tok == '-isysroot':
-      f = _strip_next_arg(f, i)
-      continue
-    if tok.startswith('-isysroot='):
-      del f[i]
-      continue
+      removed.append(tok)
+      del f[i]; continue
+    if tok == '--sysroot' or tok == '-isysroot':
+      removed.append(tok)
+      f = _strip_next_arg(f, i); continue
+    if tok.startswith('--sysroot=') or tok.startswith('-isysroot='):
+      removed.append(tok)
+      del f[i]; continue
     i += 1
+  if VERBOSE and removed:
+    print("[non-hermetic] stripped:", " ".join(removed), file=sys.stderr)
   return f
 
 def maybe_add_gcc_toolchain(flags):
@@ -151,10 +145,8 @@ def maybe_add_gcc_toolchain(flags):
 
 def apply_nonhermetic(flags):
   """
-  When NON_HERMETIC, strip -nostdinc* and any sysroot, and hint host GCC.
+  Always scrub (this wrapper is the non-hermetic variant), and add a GCC hint.
   """
-  if not NON_HERMETIC:
-    return flags
   f = sanitize_nonhermetic_flags(flags)
   f = maybe_add_gcc_toolchain(f)
   return f
@@ -163,6 +155,8 @@ def apply_nonhermetic(flags):
 
 def system(cmd):
   """Invokes cmd with os.system() and returns the exit status."""
+  if VERBOSE:
+    print("[invoke]", cmd, file=sys.stderr)
   ret = os.system(cmd)
   if os.WIFEXITED(ret):
     return os.WEXITSTATUS(ret)
@@ -179,7 +173,7 @@ def call_compiler(argv, link=False, sycl_compile=True):
 
   # Base flags from Bazel/rules
   flags = leftover
-  # Apply non-hermetic fixes up-front
+  # Scrub unconditionally (non-hermetic wrapper)
   flags = apply_nonhermetic(flags)
 
   # SYCL & common flags
@@ -242,7 +236,7 @@ def call_compiler(argv, link=False, sycl_compile=True):
       # 1) Device + host object (compile step)
       sycl_compile_flags = [" -c {} -o {} ".format(in_file, object_file)]
       sycl_compile_flags += apply_nonhermetic(flags + common_flags + compile_flags + sycl_device_only_flags)
-      compile_cmd = ('env ' + ONEAPI_COMPILER + ' ' + ' '.join(sycl_compile_flags))
+      compile_cmd = ONEAPI_COMPILER + ' ' + ' '.join(sycl_compile_flags)
       exit_status = system(compile_cmd)
       if exit_status != 0:
         return exit_status
@@ -250,7 +244,7 @@ def call_compiler(argv, link=False, sycl_compile=True):
       # 2) Device link step: produce device object consumable by host
       sycl_link_flags_dev = [" {} -o {} ".format(object_file, dev_file)]
       sycl_link_flags_dev += apply_nonhermetic(common_flags + sycl_link_flags)
-      link_cmd = ('env ' + ONEAPI_COMPILER + ' ' + ' '.join(sycl_link_flags_dev))
+      link_cmd = ONEAPI_COMPILER + ' ' + ' '.join(sycl_link_flags_dev)
       exit_status = system(link_cmd)
       if exit_status != 0:
         return exit_status
@@ -325,7 +319,6 @@ def call_compiler(argv, link=False, sycl_compile=True):
     flags += (common_flags + in_files + out_files)
     flags = apply_nonhermetic(flags)
 
-    VERBOSE = os.environ.get("ONEAPI_VERBOSE", "0") == "1"
     if VERBOSE:
       print(' '.join([CPU_COMPILER] + flags))
     return subprocess.call([CPU_COMPILER] + flags)
