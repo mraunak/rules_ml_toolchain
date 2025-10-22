@@ -41,7 +41,7 @@ def sycl_init_repository(
     # -------------------------
     # Non-hermetic (system installs)
     # -------------------------
-    # If any of these were declared earlier, that's a config error; fail fast.
+    # Fail fast if repos were declared earlier in the load chain.
     if (native.existing_rule("oneapi") or
         native.existing_rule("level_zero") or
         native.existing_rule("zero_loader")):
