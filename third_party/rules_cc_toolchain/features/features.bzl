@@ -43,6 +43,12 @@ load(
     "@rules_ml_toolchain//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl",
     "CcToolchainImportInfo",
 )
+BuiltinIncludesInfo = provider(
+    fields = {
+        "dirs": "List of toolchain builtin include directories " +
+                "(to be set as cxx_builtin_include_directories).",
+    },
+)
 
 ALL_ACTIONS = [
     ACTION_NAMES.c_compile,
@@ -221,7 +227,7 @@ def _import_feature_impl(ctx):
         for inc in toolchain_import_info
             .compilation_context.includes.to_list()
     ]
-
+    builtin_dirs = toolchain_import_info.compilation_context.builtin_includes.to_list()
     injected_include_flags = [
         "-include " + hdr.path
         for hdr in toolchain_import_info
@@ -335,7 +341,7 @@ def _import_feature_impl(ctx):
         implies = ctx.attr.implies,
         provides = ctx.attr.provides,
     )
-    return [library_feature, ctx.attr.toolchain_import[DefaultInfo]]
+    return [library_feature, ctx.attr.toolchain_import[DefaultInfo],BuiltinIncludesInfo(dirs = builtin_dirs),]
 
 cc_toolchain_import_feature = rule(
     _import_feature_impl,
@@ -346,7 +352,7 @@ cc_toolchain_import_feature = rule(
         "implies": attr.string_list(),
         "toolchain_import": attr.label(providers = [CcToolchainImportInfo]),
     },
-    provides = [FeatureInfo, DefaultInfo],
+    provides = [FeatureInfo, DefaultInfo, BuiltinIncludesInfo],
 )
 
 def _sysroot_feature(ctx):
