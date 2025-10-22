@@ -18,11 +18,6 @@
   * `TF_NEED_SYCL`: Whether to enable building with SYCL.
 """
 
-"""Repository rule for SYCL autoconfiguration.
-`sycl_configure` depends on:
-  * TF_NEED_SYCL: enable building with SYCL
-"""
-
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 def enable_sycl(ctx):
@@ -137,19 +132,6 @@ def _emit_nonhermetic_includes(ctx):
 sycl_configure = repository_rule(
     implementation = _sycl_configure_impl,
     local = True,
-    environ = ["TF_NEED_SYCL", "SYCL_BUILD_HERMETIC", "TF_ICPX_CLANG"],
-    attrs = {
-        "build_defs_tpl": attr.label(default = Label("//gpu/sycl:build_defs.bzl.tpl")),
-        "build_file":     attr.label(default = Label("//gpu/sycl:sycl.BUILD")),
-    },
-)
-
-
-
-sycl_configure = repository_rule(
-    implementation = _sycl_configure_impl,
-    local = True,
-    # Include any envs that should trigger re-run when changed
     environ = ["TF_NEED_SYCL", "SYCL_BUILD_HERMETIC", "TF_ICPX_CLANG"],
     attrs = {
         "build_defs_tpl": attr.label(default = Label("//gpu/sycl:build_defs.bzl.tpl")),
