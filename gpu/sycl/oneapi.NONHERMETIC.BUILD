@@ -9,65 +9,31 @@ load(
     "cc_toolchain_import_feature",
 )
 
-filegroup(
-    name = "clang",
-    srcs = glob([
-        "compiler/2025.1/bin/clang",
-        "compiler/2025.1/bin/compiler/clang",
-        "compiler/latest/bin/clang",
-        "compiler/latest/bin/compiler/clang",
-    ]),
-)
+# -- Tools (must be single files; adjust one of the two paths to match your install) --
+# Choose the line that exists on your machine and delete the other.
 
-filegroup(
-    name = "clang++",
-    srcs = glob([
-        "compiler/2025.1/bin/clang++",
-        "compiler/2025.1/bin/compiler/clang++",
-        "compiler/latest/bin/clang++",
-        "compiler/latest/bin/compiler/clang++",
-    ]),
-)
+alias(name = "clang",
+      actual = "compiler/2025.1/bin/clang")                 # common layout
+# alias(name = "clang", actual = "compiler/2025.1/bin/compiler/clang")  # alternate
 
-filegroup(
-    name = "icpx",
-    srcs = glob([
-        "compiler/2025.1/bin/icpx",
-        "compiler/latest/bin/icpx",
-    ]),
-)
+alias(name = "clang++",
+      actual = "compiler/2025.1/bin/clang++")
+# alias(name = "clang++", actual = "compiler/2025.1/bin/compiler/clang++")
 
-filegroup(
-    name = "clang-offload-bundler",
-    srcs = glob([
-        "compiler/2025.1/bin/clang-offload-bundler",
-        "compiler/latest/bin/clang-offload-bundler",
-    ]),
-)
+alias(name = "icpx",
+      actual = "compiler/2025.1/bin/icpx")
 
-filegroup(
-    name = "llvm-objcopy",
-    srcs = glob([
-        "compiler/2025.1/bin/llvm-objcopy",
-        "compiler/latest/bin/llvm-objcopy",
-    ]),
-)
+alias(name = "clang-offload-bundler",
+      actual = "compiler/2025.1/bin/clang-offload-bundler")
 
-filegroup(
-    name = "ld",
-    srcs = glob([
-        "compiler/2025.1/bin/ld.lld",
-        "compiler/latest/bin/ld.lld",
-    ]),
-)
+alias(name = "llvm-objcopy",
+      actual = "compiler/2025.1/bin/llvm-objcopy")
 
-filegroup(
-    name = "ar",
-    srcs = glob([
-        "compiler/2025.1/bin/llvm-ar",
-        "compiler/latest/bin/llvm-ar",
-    ]),
-)
+alias(name = "ld",
+      actual = "compiler/2025.1/bin/ld.lld")
+
+alias(name = "ar",
+      actual = "compiler/2025.1/bin/llvm-ar")
 
 
 # Provider stubs used by toolchain config (not referenced by :all to avoid cycles).
