@@ -84,32 +84,66 @@ def _sycl_configure_impl(ctx):
     )
 
     # Use the SAME façade in both hermetic and non-hermetic.
-    # In hermetic, @oneapi/@level_zero/@zero_loader are dist_repo downloads.
-    # In non-hermetic, they are new_local_repository pointing at system roots.
     ctx.file("sycl/BUILD", ctx.read(ctx.attr.build_file))
 
     # Make repo root a Bazel package
     ctx.file("BUILD", "")
- def _emit_nonhermetic_includes(repository_ctx):
-    incs = []
-    # clang resource
-    clang = repository_ctx.which("clang") or repository_ctx.which("icpx")
-    if clang:
-        r = repository_ctx.execute([clang, "-print-resource-dir"])
-        if r.return_code == 0:
-            incs.append(repository_ctx.path(r.stdout.strip() + "/include").realpath)
-    # system
-    incs.append("/usr/include")
-    # gcc include/include-fixed
-    gcc = repository_ctx.which("gcc")
-    if gcc:
-        r = repository_ctx.execute([gcc, "-print-libgcc-file-name"])
-        if r.return_code == 0:
-            verdir = repository_ctx.path(r.stdout.strip()).dirname
-            incs.append(str(verdir) + "/include")
-            incs.append(str(verdir) + "/include-fixed")
 
-    repository_ctx.file("nonhermetic_includes.bzl", "NONHERMETIC_INCLUDES = " + repr(incs) + "\n")
+    # NEW: Emit host include roots for non-hermetic builds so the toolchain
+    # treats them as "builtin" (prevents absolute-path include errors).
+    if ctx.getenv("SYCL_BUILD_HERMETIC", "1") == "0":
+        _emit_nonhermetic_includes(ctx)
+
+
+def _emit_nonhermetic_includes(ctx):
+    """Detect host Clang/GCC builtin/system include dirs and write a bzl list."""
+    incs = []
+
+    def _add_if_dir(p):
+        if p and ctx.path(p).exists:
+            incs.append(str(ctx.path(p).realpath))
+
+    # Clang resource include (e.g., /usr/lib/clang/18/include)
+    clang = ctx.which("clang") or ctx.which("icpx")
+    if clang:
+        r = ctx.execute([clang, "-print-resource-dir"])
+        if r.return_code == 0:
+            _add_if_dir(r.stdout.strip() + "/include")
+
+    # System headers (glibc)
+    _add_if_dir("/usr/include")
+
+    # GCC include + include-fixed (where the compiler's limits.h lives)
+    gcc = ctx.which("gcc")
+    if gcc:
+        r = ctx.execute([gcc, "-print-libgcc-file-name"])
+        if r.return_code == 0:
+            verdir = ctx.path(r.stdout.strip()).dirname  # .../lib/gcc/<triple>/<ver>
+            _add_if_dir(str(verdir) + "/include")
+            _add_if_dir(str(verdir) + "/include-fixed")
+
+    # De-dup while preserving order
+    seen = {}
+    incs_dedup = []
+    for p in incs:
+        if p not in seen:
+            seen[p] = True
+            incs_dedup.append(p)
+
+    ctx.file("nonhermetic_includes.bzl",
+             "NONHERMETIC_INCLUDES = " + repr(incs_dedup) + "\n")
+
+
+sycl_configure = repository_rule(
+    implementation = _sycl_configure_impl,
+    local = True,
+    environ = ["TF_NEED_SYCL", "SYCL_BUILD_HERMETIC", "TF_ICPX_CLANG"],
+    attrs = {
+        "build_defs_tpl": attr.label(default = Label("//gpu/sycl:build_defs.bzl.tpl")),
+        "build_file":     attr.label(default = Label("//gpu/sycl:sycl.BUILD")),
+    },
+)
+
 
 
 sycl_configure = repository_rule(
