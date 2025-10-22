@@ -29,36 +29,68 @@ from __future__ import print_function
 from argparse import ArgumentParser
 import os
 import subprocess
-import re
 import sys
 import shlex
 import tempfile
 import shutil
 
+# --- Environment --------------------------------------------------------------
+
 ONEAPI_LIBRARY_PATH = os.environ['ONEAPI_LIBRARY_PATH']
 ONEAPI_VERSION = os.environ['ONEAPI_VERSION']
+
+# Non-hermetic when SYCL_BUILD_HERMETIC=0
+NON_HERMETIC = os.environ.get('SYCL_BUILD_HERMETIC', '1') == '0'
 
 def check_is_intel_llvm(path):
   cmd = path + " -dM -E -x c /dev/null | grep '__INTEL_LLVM_COMPILER'"
   check_result = subprocess.getoutput(cmd)
-  if len(check_result) > 0 and check_result.find('__INTEL_LLVM_COMPILER') > -1:
-    return True
-  return False
+  return ('__INTEL_LLVM_COMPILER' in check_result) if check_result else False
 
 ONEAPI_COMPILER = os.environ['ONEAPI_ICPX_PATH']
 if not os.path.exists(ONEAPI_COMPILER):
   ONEAPI_COMPILER = os.environ['ONEAPI_CLANG_PATH']
   if not os.path.exists(ONEAPI_COMPILER) or check_is_intel_llvm(ONEAPI_COMPILER):
-    raise RuntimeError("Compiler '{0}' and '{1}' not found or invalid. Current directory is '{2}'"
-      .format(os.environ['ONEAPI_ICPX_PATH'], os.environ['ONEAPI_CLANG_PATH'], os.getcwd()))
+    raise RuntimeError(
+      "Compiler '{0}' and '{1}' not found or invalid. CWD='{2}'".format(
+        os.getenv('ONEAPI_ICPX_PATH'), os.getenv('ONEAPI_CLANG_PATH'), os.getcwd()
+      )
+    )
 
-CPU_COMPILER = os.environ['GCC_PATH']   # GCC_PATH is Clang compiler path
-USE_ICPX_CLANG = True
+# Prefer host compilers for non-hermetic host steps
+def _pick_host_cxx():
+  for cand in ('clang++', 'c++', 'g++'):
+    p = shutil.which(cand)
+    if p:
+      return p
+  return None
 
-# --- NEW: Non-hermetic helpers ------------------------------------------------
+def _pick_host_cc():
+  for cand in ('clang', 'cc', 'gcc'):
+    p = shutil.which(cand)
+    if p:
+      return p
+  return None
+
+# Default CPU_COMPILER from env; override for non-hermetic host flow
+CPU_COMPILER = os.environ['GCC_PATH']   # In your setup this is a Clang path
+if NON_HERMETIC:
+  host_cxx = _pick_host_cxx()
+  if host_cxx:
+    CPU_COMPILER = host_cxx
+
+# Respect AR_PATH from env; fallback to which
+AR_PATH = os.environ.get('AR_PATH')
+if not AR_PATH:
+  found_ar = shutil.which("ar")
+  if not found_ar:
+    raise RuntimeError("ar not found or invalid")
+  AR_PATH = found_ar
+
+# --- Non-hermetic helpers -----------------------------------------------------
 
 def _strip_next_arg(flags, i):
-  """Remove flags[i] and flags[i+1] if present (for --sysroot <arg> style)."""
+  """Remove flags[i] and flags[i+1] if present (for '--sysroot <arg>' style)."""
   del flags[i]
   if i < len(flags) and not flags[i].startswith('-'):
     del flags[i]
@@ -66,25 +98,24 @@ def _strip_next_arg(flags, i):
 
 def sanitize_nonhermetic_flags(flags):
   """
-  For Option A: remove flags that strip system/builtin includes or force a foreign sysroot.
-  Operates in-place on a copy; returns new list.
+  Remove flags that strip system/builtin includes or force a foreign sysroot.
   """
   f = list(flags)
   i = 0
   while i < len(f):
     tok = f[i]
-    # Remove -nostdinc / -nostdinc++
+    # Drop -nostdinc / -nostdinc++
     if tok in ('-nostdinc', '-nostdinc++'):
       del f[i]
       continue
-    # Remove --sysroot=/path or --sysroot /path
+    # Drop --sysroot=/path or --sysroot /path
     if tok == '--sysroot':
       f = _strip_next_arg(f, i)
       continue
     if tok.startswith('--sysroot='):
       del f[i]
       continue
-    # Remove -isysroot /path and -isysroot=/path (less common here, but safe)
+    # Drop -isysroot=/path or -isysroot /path
     if tok == '-isysroot':
       f = _strip_next_arg(f, i)
       continue
@@ -96,8 +127,8 @@ def sanitize_nonhermetic_flags(flags):
 
 def maybe_add_gcc_toolchain(flags):
   """
-  Add --gcc-toolchain=<host-root> to help Clang find GCC include{,-fixed} if needed.
-  Safe to add on most systems; skip if already present.
+  Add --gcc-toolchain=<host-root> to help Clang find GCC include{,-fixed}.
+  Harmless if not needed; skipped if already present.
   """
   if any(x.startswith('--gcc-toolchain') for x in flags):
     return flags
@@ -110,46 +141,37 @@ def maybe_add_gcc_toolchain(flags):
   libgcc_path = res.stdout.strip()
   if not libgcc_path:
     return flags
-  # libgcc typically: /usr/lib/gcc/<triple>/<ver>/libgcc.a
-  ver_dir = os.path.dirname(libgcc_path)              # .../<ver>
-  gcc_root = os.path.dirname(ver_dir)                 # .../<triple>
-  # For Clang, --gcc-toolchain expects the root containing lib/gcc/<triple>/<ver>
-  toolchain_root = os.path.dirname(gcc_root)          # .../usr/lib/gcc
-  # Prefer the directory one level up from <ver>, i.e., /usr
-  # But many distros accept the <triple> parent; use parent of <triple>.
-  toolchain_root = os.path.dirname(toolchain_root)    # /usr
-  # Fallback: if that seems too shallow, use parent of <ver> (gcc_root)
+  ver_dir = os.path.dirname(libgcc_path)            # .../<ver>
+  triple_dir = os.path.dirname(ver_dir)             # .../<triple>
+  libgcc_root = os.path.dirname(triple_dir)         # .../lib/gcc
+  toolchain_root = os.path.dirname(libgcc_root)     # often /usr
   if not os.path.isdir(toolchain_root):
-    toolchain_root = gcc_root
+    toolchain_root = triple_dir
   return flags + ['--gcc-toolchain=' + toolchain_root]
 
 def apply_nonhermetic(flags):
-  """If ONEAPI_NON_HERMETIC=1, sanitize and optionally add gcc-toolchain."""
-  if os.environ.get('SYCL_BUILD_HERMETIC', '0') != '1':
+  """
+  When NON_HERMETIC, strip -nostdinc* and any sysroot, and hint host GCC.
+  """
+  if not NON_HERMETIC:
     return flags
   f = sanitize_nonhermetic_flags(flags)
-  # Optional but helpful; keep minimal:
   f = maybe_add_gcc_toolchain(f)
   return f
 
-# -----------------------------------------------------------------------------
-
-result = subprocess.run(["which", "ar"], capture_output=True, text=True)
-if result.returncode == 0:
-    AR_PATH = result.stdout.strip()  # Remove any trailing newline
-else:
-    raise RuntimeError("ar not found or invalid")
+# --- Utilities ----------------------------------------------------------------
 
 def system(cmd):
-  """Invokes cmd with os.system()"""
-
+  """Invokes cmd with os.system() and returns the exit status."""
   ret = os.system(cmd)
   if os.WIFEXITED(ret):
     return os.WEXITSTATUS(ret)
   else:
     return -os.WTERMSIG(ret)
 
-def call_compiler(argv, link = False, sycl_compile = True):
+# --- Main driver --------------------------------------------------------------
+
+def call_compiler(argv, link=False, sycl_compile=True):
   parser = ArgumentParser()
   parser.add_argument('-c', nargs=1, action='append')
   parser.add_argument('-o', nargs=1, action='append')
@@ -160,43 +182,42 @@ def call_compiler(argv, link = False, sycl_compile = True):
   # Apply non-hermetic fixes up-front
   flags = apply_nonhermetic(flags)
 
-  sycl_device_only_flags = ['-fsycl']
-  sycl_device_only_flags.append('-fno-sycl-unnamed-lambda')
-  sycl_device_only_flags.append('-fsycl-targets=spir64_gen,spir64')
-  sycl_device_only_flags.append('-sycl-std=2020')
-  sycl_device_only_flags.append('-fhonor-infinities')
-  sycl_device_only_flags.append('-fhonor-nans')
-  sycl_device_only_flags.append('-fno-sycl-use-footer')
-  sycl_device_only_flags.append('-Xclang -fdenormal-fp-math=preserve-sign')
-  sycl_device_only_flags.append('-Xclang -cl-mad-enable')
-  sycl_device_only_flags.append('-cl-fp32-correctly-rounded-divide-sqrt')
-  sycl_device_only_flags.append('-fsycl-device-code-split=per_source')
-  sycl_device_only_flags.append('-fsycl-unnamed-lambda')
+  # SYCL & common flags
+  sycl_device_only_flags = [
+    '-fsycl',
+    '-fno-sycl-unnamed-lambda',
+    '-fsycl-targets=spir64_gen,spir64',
+    '-sycl-std=2020',
+    '-fhonor-infinities',
+    '-fhonor-nans',
+    '-fno-sycl-use-footer',
+    '-Xclang -fdenormal-fp-math=preserve-sign',
+    '-Xclang -cl-mad-enable',
+    '-cl-fp32-correctly-rounded-divide-sqrt',
+    '-fsycl-device-code-split=per_source',
+    '-fsycl-unnamed-lambda',
+  ]
 
-  common_flags = []
-  # ref: https://github.com/intel/llvm/blob/sycl/clang/docs/UsersManual.rst#controlling-floating-point-behavior
-  common_flags.append("-fno-finite-math-only")
-  common_flags.append("-fno-fast-math")
-  common_flags.append("-fexceptions")
+  common_flags = [
+    "-fno-finite-math-only",
+    "-fno-fast-math",
+    "-fexceptions",
+  ]
 
-  compile_flags = []
-  compile_flags.append('-DDNNL_GRAPH_WITH_SYCL=1')
-  compile_flags.append("-std=c++17")
+  compile_flags = [
+    '-DDNNL_GRAPH_WITH_SYCL=1',
+    "-std=c++17",
+  ]
 
-  link_flags = ['-fPIC']
-  link_flags.append('-lsycl')
-  link_flags.append("-Wl,-no-as-needed")
-  link_flags.append("-Wl,--enable-new-dtags")
+  link_flags = ['-fPIC', '-lsycl', "-Wl,-no-as-needed", "-Wl,--enable-new-dtags"]
   for lib_path in ONEAPI_LIBRARY_PATH.split(":"):
     link_flags.append("-L" + lib_path)
   link_flags.append("-lOpenCL")
 
-  sycl_link_flags = ['-fPIC']
-  sycl_link_flags.append("-fsycl")
-  sycl_link_flags.append('-fsycl-max-parallel-link-jobs=8')
-  sycl_link_flags.append('-fsycl-link')
+  sycl_link_flags = ['-fPIC', "-fsycl", '-fsycl-max-parallel-link-jobs=8', '-fsycl-link']
 
   in_files, out_files = [], []
+
   if sycl_compile:
     flags = [shlex.quote(s) for s in flags]
     # device compilation
@@ -213,23 +234,20 @@ def call_compiler(argv, link = False, sycl_compile = True):
     out_file = args.o[0][0]
     out_file_name = out_file.split('/')[-1].split('.')[0]
 
-    # Create a temporary directory
+    # Temporary workspace
     with tempfile.TemporaryDirectory() as temp_dir:
       object_file = os.path.join(temp_dir, out_file_name + '.compile.o')
       dev_file = os.path.join(temp_dir, out_file_name + '.dev.o')
 
-      # compile object file
-      # icx -fsycl -c kernel.cpp -o kernel.compile.o
+      # 1) Device + host object (compile step)
       sycl_compile_flags = [" -c {} -o {} ".format(in_file, object_file)]
-      # Apply non-hermetic fixes to the full compile line as well
       sycl_compile_flags += apply_nonhermetic(flags + common_flags + compile_flags + sycl_device_only_flags)
       compile_cmd = ('env ' + ONEAPI_COMPILER + ' ' + ' '.join(sycl_compile_flags))
       exit_status = system(compile_cmd)
       if exit_status != 0:
         return exit_status
 
-      # generate device object file that can be used by host compiler
-      # icx -fsycl -fPIC -fsycl-link kernel.compile.o -o kernel.dev.o
+      # 2) Device link step: produce device object consumable by host
       sycl_link_flags_dev = [" {} -o {} ".format(object_file, dev_file)]
       sycl_link_flags_dev += apply_nonhermetic(common_flags + sycl_link_flags)
       link_cmd = ('env ' + ONEAPI_COMPILER + ' ' + ' '.join(sycl_link_flags_dev))
@@ -237,50 +255,46 @@ def call_compiler(argv, link = False, sycl_compile = True):
       if exit_status != 0:
         return exit_status
 
-      # archive object files
-      # ar rcsD output.o kernel.compile.o kernel.dev.o
+      # 3) Archive both into the requested output
       ar_flags = " rcsD {} {} {}".format(out_file, object_file, dev_file)
-      ar_cmd = ('env ' + AR_PATH + ar_flags)
+      ar_cmd = AR_PATH + ar_flags
       return system(ar_cmd)
+
   elif link:
     # Expand @params file if present
     expanded_flags = []
     for s in flags:
-        if s.startswith("@") and os.path.isfile(s[1:]):
-            with open(s[1:], "r") as f:
-                expanded_flags += shlex.split(f.read())
-        else:
-            expanded_flags.append(s)
+      if s.startswith("@") and os.path.isfile(s[1:]):
+        with open(s[1:], "r") as f:
+          expanded_flags += shlex.split(f.read())
+      else:
+        expanded_flags.append(s)
 
-    # Apply non-hermetic sanitization to the expanded list
+    # Scrub non-hermetic-unfriendly flags
     expanded_flags = apply_nonhermetic(expanded_flags)
 
+    # Dedup while keeping "whole archive" groups together
     seen = set()
     ordered_flags = []
-
-    # Track the type of each unique flag and preserve order
     for s in expanded_flags:
-        if s not in seen:
-            seen.add(s)
-            flag_type = "whole" if s.endswith((".o", ".lo")) else "regular"
-            ordered_flags.append((flag_type, shlex.quote(s)))
+      if s not in seen:
+        seen.add(s)
+        flag_type = "whole" if s.endswith((".o", ".lo")) else "regular"
+        ordered_flags.append((flag_type, shlex.quote(s)))
 
     deduped_flags = []
     in_whole_archive = False
-
     for flag_type, flag in ordered_flags:
-        if flag_type == "whole":
-            if not in_whole_archive:
-                deduped_flags.append("-Wl,--whole-archive")
-                in_whole_archive = True
-            deduped_flags.append(flag)
-        else:
-            if in_whole_archive:
-                deduped_flags.append("-Wl,--no-whole-archive")
-                in_whole_archive = False
-            deduped_flags.append(flag)
-
-    # Close any open --whole-archive section
+      if flag_type == "whole":
+        if not in_whole_archive:
+          deduped_flags.append("-Wl,--whole-archive")
+          in_whole_archive = True
+        deduped_flags.append(flag)
+      else:
+        if in_whole_archive:
+          deduped_flags.append("-Wl,--no-whole-archive")
+          in_whole_archive = False
+        deduped_flags.append(flag)
     if in_whole_archive:
       deduped_flags.append("-Wl,--no-whole-archive")
 
@@ -291,18 +305,19 @@ def call_compiler(argv, link = False, sycl_compile = True):
 
     deduped_flags += apply_nonhermetic(common_flags + in_files + out_files + link_flags)
 
-    # Write to response file to avoid command line length issues
+    # Use a response file to avoid command-line length issues
     with tempfile.NamedTemporaryFile("w", delete=False, suffix=".params") as f:
       f.write('\n'.join(deduped_flags))
       response_file = f.name
-    cmd = f'env {CPU_COMPILER} @{response_file}' # env icpx @/tmp/tmpabc123.params
+
+    cmd = f'{CPU_COMPILER} @{response_file}'
     return system(cmd)
+
   else:
-    # host compilation
+    # Host compilation only
     if args.c:
       in_files.append('-c')
       in_files.extend(args.c[0])
-      input_file = os.path.basename(args.c[0][0])
     if args.o:
       out_files.append('-o')
       out_files.extend(args.o[0])
@@ -311,16 +326,17 @@ def call_compiler(argv, link = False, sycl_compile = True):
     flags = apply_nonhermetic(flags)
 
     VERBOSE = os.environ.get("ONEAPI_VERBOSE", "0") == "1"
-    if USE_ICPX_CLANG:
-      if VERBOSE:
-        print(' '.join([CPU_COMPILER] + flags))
-      return subprocess.call([CPU_COMPILER] + flags)
-    else:
-      if VERBOSE:
-        print(' '.join([ONEAPI_COMPILER] + flags))
-      return subprocess.call([ONEAPI_COMPILER] + flags)
+    if VERBOSE:
+      print(' '.join([CPU_COMPILER] + flags))
+    return subprocess.call([CPU_COMPILER] + flags)
+
+# --- Arg normalization & entrypoint ------------------------------------------
 
 def standardize_key_val_args(argv, key):
+  """
+  Turns ["-isystem", "/path"] into ["-isystem/path"] when needed, and
+  leaves ["-isystem/path"] untouched. (Matches your prior behavior.)
+  """
   mod_args = []
   last = None
   for arg in argv:
@@ -328,14 +344,12 @@ def standardize_key_val_args(argv, key):
       mod_args.append(last + arg)
       last = None
       continue
-
     if arg == key:
       last = key
     elif arg.startswith(key):
       mod_args.append(arg.replace(' ', ''))
     else:
       mod_args.append(arg)
-
   return mod_args
 
 def main():
@@ -343,8 +357,11 @@ def main():
   parser.add_argument('-sycl_compile', action='store_true')
   parser.add_argument('-link_stage', action='store_true')
   args, leftover = parser.parse_known_args(sys.argv[1:])
-
-  return call_compiler(standardize_key_val_args(leftover, "-isystem"), link=args.link_stage, sycl_compile=args.sycl_compile)
+  return call_compiler(
+    standardize_key_val_args(leftover, "-isystem"),
+    link=args.link_stage,
+    sycl_compile=args.sycl_compile
+  )
 
 if __name__ == '__main__':
   sys.exit(main())
