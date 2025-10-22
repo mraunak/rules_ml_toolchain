@@ -63,6 +63,81 @@ def _create_dummy_repository(ctx):
     )
     ctx.file("sycl/BUILD", "")
 
+def _emit_nonhermetic_includes(ctx):
+    """Detect host builtin include dirs and write NONHERMETIC_INCLUDES."""
+    incs = []
+
+    def _add_if_dir(p):
+        if not p:
+            return
+        rp = ctx.path(p)
+        if rp.exists:
+            incs.append(str(rp.realpath))
+
+    # 1) Clang verbose search list (most robust)
+    clang = ctx.which("clang") or ctx.which("icpx")
+    if clang:
+        r = ctx.execute([clang, "-E", "-v", "-x", "c", "/dev/null", "-o", "/dev/null"])
+        if r.return_code == 0:
+            lines = r.stderr.splitlines()
+            in_block = False
+            for ln in lines:
+                if "search starts here:" in ln:
+                    in_block = True
+                    continue
+                if in_block and "End of search list." in ln:
+                    in_block = False
+                    break
+                if in_block:
+                    s = ln.strip()
+                    if s.startswith("/") and " (framework directory)" not in s:
+                        _add_if_dir(s)
+
+    # 2) Clang resource dir(s) (explicit)
+    for prog in ("clang", "icpx"):
+        p = ctx.which(prog)
+        if not p:
+            continue
+        r = ctx.execute([p, "-print-resource-dir"])
+        if r.return_code == 0:
+            rd = r.stdout.strip()
+            _add_if_dir(rd + "/include")
+            # Debian/Ubuntu alias path: /usr/lib/clang/<ver>/include
+            parts = rd.strip("/").split("/")
+            if len(parts) >= 2 and parts[-2] == "clang":
+                # already /.../clang/<ver>
+                _add_if_dir(rd + "/include")
+            elif "lib/clang" in rd:
+                try:
+                    ver = parts[-1]
+                    _add_if_dir("/usr/lib/clang/{}/include".format(ver))
+                except Exception:
+                    pass
+
+    # 3) System headers
+    _add_if_dir("/usr/include")
+
+    # 4) GCC include + include-fixed (compiler’s limits.h)
+    gcc = ctx.which("gcc")
+    if gcc:
+        r = ctx.execute([gcc, "-print-libgcc-file-name"])
+        if r.return_code == 0:
+            verdir = ctx.path(r.stdout.strip()).dirname  # .../lib/gcc/<triple>/<ver>
+            _add_if_dir(str(verdir) + "/include")
+            _add_if_dir(str(verdir) + "/include-fixed")
+
+    # De-dup while preserving order
+    seen = {}
+    incs_dedup = []
+    for p in incs:
+        if p not in seen:
+            seen[p] = True
+            incs_dedup.append(p)
+
+    ctx.file("nonhermetic_includes.bzl",
+             "NONHERMETIC_INCLUDES = " + repr(incs_dedup) + "\n")
+
+
 def _sycl_configure_impl(ctx):
     if not enable_sycl(ctx):
         _create_dummy_repository(ctx)
@@ -88,45 +163,8 @@ def _sycl_configure_impl(ctx):
     # treats them as "builtin" (prevents absolute-path include errors).
     if ctx.getenv("SYCL_BUILD_HERMETIC", "1") == "0":
         _emit_nonhermetic_includes(ctx)
-
-
-def _emit_nonhermetic_includes(ctx):
-    """Detect host Clang/GCC builtin/system include dirs and write a bzl list."""
-    incs = []
-
-    def _add_if_dir(p):
-        if p and ctx.path(p).exists:
-            incs.append(str(ctx.path(p).realpath))
-
-    # Clang resource include (e.g., /usr/lib/clang/18/include)
-    clang = ctx.which("clang") or ctx.which("icpx")
-    if clang:
-        r = ctx.execute([clang, "-print-resource-dir"])
-        if r.return_code == 0:
-            _add_if_dir(r.stdout.strip() + "/include")
-
-    # System headers (glibc)
-    _add_if_dir("/usr/include")
-
-    # GCC include + include-fixed (where the compiler's limits.h lives)
-    gcc = ctx.which("gcc")
-    if gcc:
-        r = ctx.execute([gcc, "-print-libgcc-file-name"])
-        if r.return_code == 0:
-            verdir = ctx.path(r.stdout.strip()).dirname  # .../lib/gcc/<triple>/<ver>
-            _add_if_dir(str(verdir) + "/include")
-            _add_if_dir(str(verdir) + "/include-fixed")
-
-    # De-dup while preserving order
-    seen = {}
-    incs_dedup = []
-    for p in incs:
-        if p not in seen:
-            seen[p] = True
-            incs_dedup.append(p)
-
-    ctx.file("nonhermetic_includes.bzl",
-             "NONHERMETIC_INCLUDES = " + repr(incs_dedup) + "\n")
+    else:
+        ctx.file("nonhermetic_includes.bzl", "NONHERMETIC_INCLUDES = []\n")
 
 
 sycl_configure = repository_rule(
