@@ -53,6 +53,11 @@ if not os.path.exists(ONEAPI_COMPILER):
 
 CPU_COMPILER = os.environ['GCC_PATH']   # GCC_PATH is Clang compiler path
 USE_ICPX_CLANG = True
+print("ONEAPI_LIBRARY_PATH",ONEAPI_LIBRARY_PATH)
+print("ONEAPI_VERSION",ONEAPI_VERSION)
+print("ONEAPI_COMPILER",ONEAPI_COMPILER)
+print("ONEAPI_CLANG_PATH",ONEAPI_CLANG_PATH)
+
 
 # %{tf_icpx_clang} is not replaced in old template
 #if ('%{tf_icpx_clang}')=="False":
