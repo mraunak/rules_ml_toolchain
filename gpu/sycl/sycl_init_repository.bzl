@@ -45,8 +45,7 @@ def sycl_init_repository(
     if (native.existing_rule("oneapi") or
         native.existing_rule("level_zero") or
         native.existing_rule("zero_loader")):
-        fail("oneapi/level_zero/zero_loader already declared elsewhere. "
-             "Remove earlier sycl_init_repository() calls (e.g., in workspace2.bzl:_tf_toolchains()).")
+        fail("oneapi/level_zero/zero_loader already declared elsewhere ")
 
     native.new_local_repository(
         name = "oneapi",
