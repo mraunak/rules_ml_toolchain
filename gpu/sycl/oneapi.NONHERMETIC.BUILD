@@ -8,7 +8,7 @@ load(
     "@rules_ml_toolchain//third_party/rules_cc_toolchain/features:features.bzl",
     "cc_toolchain_import_feature",
 )
-load(":nonhermetic_includes.bzl", "NONHERMETIC_INCLUDES")
+load("@local_config_sycl//:nonhermetic_includes.bzl", "NONHERMETIC_INCLUDES")
 
 # -- Tools (each alias must resolve to ONE existing file) ----------------------
 
