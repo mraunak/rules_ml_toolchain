@@ -14,24 +14,6 @@
 # ==============================================================================
 
 """Repository rule for SYCL autoconfiguration.
-`sycl_configure` depends on the following environment variables:
-  * `TF_NEED_SYCL`: Whether to enable building with SYCL.
-"""
-
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-# Copyright 2025 Google LLC
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-#     https://www.apache.org/licenses/LICENSE-2.0
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ==============================================================================
-
-"""Repository rule for SYCL autoconfiguration.
 
 `sycl_configure` depends on:
   * TF_NEED_SYCL: enable building with SYCL
@@ -129,6 +111,10 @@ def _emit_nonhermetic_includes(ctx):
                     if ver and ver[0].isdigit():
                         _add_if_dir("/usr/lib/clang/" + ver + "/include")
 
+    # --- Force-add common Clang alias (covers your system) ---
+    _add_if_dir("/usr/lib/clang/18/include")
+    _add_if_dir("/usr/lib/llvm-18/lib/clang/18/include")
+
     # 3) System headers
     _add_if_dir("/usr/include")
 
@@ -141,7 +127,7 @@ def _emit_nonhermetic_includes(ctx):
             if libgcc:
                 verdir = ctx.path(libgcc).dirname  # .../lib/gcc/<triple>/<ver>
                 _add_if_dir(str(verdir) + "/include")
-                _add_if_dir(str(verdir) + "/include-fixed")
+                _add_if_dir(str(verdir) + "/include-fixed")  # ensure include-fixed is present
 
     # De-dup while preserving order
     seen = {}
