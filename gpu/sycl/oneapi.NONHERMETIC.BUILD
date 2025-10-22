@@ -8,6 +8,7 @@ load(
     "@rules_ml_toolchain//third_party/rules_cc_toolchain/features:features.bzl",
     "cc_toolchain_import_feature",
 )
+load(":nonhermetic_includes.bzl", "NONHERMETIC_INCLUDES")
 
 # -- Tools (each alias must resolve to ONE existing file) ----------------------
 
@@ -40,7 +41,10 @@ alias(name = "asan_ignorelist", actual = "compiler/2025.1/lib/clang/20/share/asa
 
 
 # Provider stubs used by toolchain config (not referenced by :all to avoid cycles).
-cc_toolchain_import(name = "includes")
+cc_toolchain_import(
+    name = "includes",
+    includes = NONHERMETIC_INCLUDES,
+)
 cc_toolchain_import(name = "core")
 cc_toolchain_import(name = "libclang_rt")
 cc_toolchain_import(name = "mkl")
