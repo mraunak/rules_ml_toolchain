@@ -75,6 +75,18 @@ cc_toolchain_config(
         ":binaries",
         ":includes_feature",  # fine to keep here as a FeatureInfo too
     ],
+    tool_paths = {
+        "gcc": "compiler/2025.1/bin/compiler/clang",
+        "cpp": "compiler/2025.1/bin/compiler/clang++",
+        "ld":  "compiler/2025.1/bin/compiler/ld.lld",
+        "ar":  "compiler/2025.1/bin/compiler/llvm-ar",
+        # Optional extras if you want to be thorough and have them:
+        # "nm": "compiler/2025.1/bin/compiler/llvm-nm",
+        # "objdump": "compiler/2025.1/bin/compiler/llvm-objdump",
+        # "strip": "compiler/2025.1/bin/compiler/llvm-strip",
+        # "gcov": "compiler/2025.1/bin/llvm-cov",      # if needed
+        # "llvm-cov": "compiler/2025.1/bin/llvm-cov",
+    },
 
     # Map tools to your aliases:
     c_compiler = ":clang",
