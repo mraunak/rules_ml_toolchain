@@ -43,7 +43,7 @@ alias(name = "asan_ignorelist", actual = "compiler/2025.1/lib/clang/20/share/asa
 # Provider stubs used by toolchain config (not referenced by :all to avoid cycles).
 cc_toolchain_import(
     name = "includes",
-    builtin_include_directories = NONHERMETIC_INCLUDES,
+    builtin_includes = NONHERMETIC_INCLUDES,
 )
 cc_toolchain_import(name = "core")
 cc_toolchain_import(name = "libclang_rt")
@@ -53,6 +53,15 @@ cc_toolchain_import_feature(
     name = "binaries",
     enabled = True,
     toolchain_import = ":includes",
+)
+cc_toolchain_import_feature(
+    name = "includes_feature",
+    enabled = True,
+    toolchain_import = ":includes",
+)
+oneapi_toolchain(
+    name = "toolchain_cfg",
+    includes_feature = ":includes_feature",
 )
 
 # -- Headers for normal code: NO GLOBS; just add include dirs (gives -I flags).
