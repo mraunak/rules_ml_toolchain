@@ -1,116 +1,194 @@
 package(default_visibility = ["//visibility:public"])
 
-load("@rules_cc//cc:defs.bzl", "cc_toolchain")
 load("@rules_ml_toolchain//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl", "cc_toolchain_import")
-load("@rules_ml_toolchain//third_party/rules_cc_toolchain/features:features.bzl", "cc_toolchain_import_feature")
-load("@rules_ml_toolchain//third_party/rules_cc_toolchain:toolchain_config.bzl", "cc_toolchain_config")
-load("@local_config_sycl//:nonhermetic_includes.bzl", "NONHERMETIC_INCLUDES")
+load("@rules_ml_toolchain//gpu/sycl:oneapi_feature.bzl", "oneapi_feature")
 
-# Tools
-alias(name = "clang",   actual = "compiler/2025.1/bin/compiler/clang")
-alias(name = "clang++", actual = "compiler/2025.1/bin/compiler/clang++")
-alias(name = "ld",      actual = "compiler/2025.1/bin/compiler/ld.lld")
-alias(name = "ar",      actual = "compiler/2025.1/bin/compiler/llvm-ar")
+# Filled in by the repo rule
+ONEAPI_VERSION = "{{ONEAPI_VERSION}}"
+CLANG_VERSION  = "{{CLANG_VERSION}}"
 
-# Built-in include roots (Bazel builtin, not flags)
-cc_toolchain_import(
-    name = "includes",
-    builtin_includes = NONHERMETIC_INCLUDES,
-)
-
-cc_toolchain_import_feature(
-    name = "includes_feature",
-    enabled = True,
-    toolchain_import = ":includes",
-    use_lld = True,               # keep lld, driven by driver
-    inject_cxx_runtime = False,   # not needed if 'ld' is clang++
-)
-
-# Optional: your normal binary flags/paths feature
-cc_toolchain_import_feature(
-    name = "binaries",
-    enabled = True,
-    toolchain_import = ":includes",
-)
-
-# Toolchain config: NO sysroot; ld tool is clang++ driver
-cc_toolchain_config(
-    name = "toolchain_cfg",
-    target_system_name = "local",
-    target_cpu = "x86_64",
-    includes_feature = ":includes_feature",
-    compiler_features = [
-        ":binaries",
-        ":includes_feature",
-        # Optional convenience feature that sets -fuse-ld=lld on link actions:
-        # "//third_party/rules_cc_toolchain/features:use_lld",
-        # Optional: tiny "cxx_runtime" feature if you insist on driving pure ld.lld (not needed when ld=clang++)
-    ],
-    tool_paths = {
-        "gcc": "compiler/2025.1/bin/compiler/clang",
-        "cpp": "compiler/2025.1/bin/compiler/clang++",
-        "ld":  "compiler/2025.1/bin/compiler/clang++",  # drive lld via driver
-        "ar":  "compiler/2025.1/bin/compiler/llvm-ar",
-        "nm": "compiler/2025.1/bin/compiler/llvm-nm",
-        "objdump": "compiler/2025.1/bin/compiler/llvm-objdump",
-        "strip": "compiler/2025.1/bin/compiler/llvm-strip",
-        "gcov": "compiler/2025.1/bin/llvm-cov",      # if needed
-        "llvm-cov": "compiler/2025.1/bin/llvm-cov",
-    },
-    c_compiler = ":clang",
-    cc_compiler = ":clang++",
-    linker     = ":ld",
-    archiver   = ":ar",
-)
-
-# A small filegroup of the tools
 filegroup(
     name = "all",
-    srcs = [":clang", ":clang++", ":ld", ":ar"],
+    srcs = glob([
+        "advisor/2021.15/**",
+        "ccl/2021.15/**",
+        "common/{v}/**".format(v = ONEAPI_VERSION),
+        "compiler/{v}/**".format(v = ONEAPI_VERSION),
+        "dal/2025.5/env/**",
+        "dal/2025.5/etc/**",
+        "dal/2025.5/include/**",
+        "dal/2025.5/lib/libone*",
+        "dal/2025.5/lib/pkgconfig/**",
+        "dal/2025.5/share/**",
+        "dev-utilities/**",
+        "dnnl/**",
+        "dpcpp-ct/**",
+        "dpl/**",
+        "installer/**",
+        "ipp/2022.1/env/**",
+        "ipp/2022.1/etc/**",
+        "ipp/2022.1/include/**",
+        "ipp/2022.1/lib/lib*",
+        "ipp/2022.1/lib/nonpic/**",
+        "ipp/2022.1/lib/pkgconfig/**",
+        "ipp/2022.1/opt/**",
+        "ipp/2022.1/share/**",
+        "ippcp/{v}/env/**".format(v = ONEAPI_VERSION),
+        "ippcp/{v}/etc/**".format(v = ONEAPI_VERSION),
+        "ippcp/{v}/include/**".format(v = ONEAPI_VERSION),
+        "ippcp/{v}/lib/lib*".format(v = ONEAPI_VERSION),
+        "ippcp/{v}/lib/nonpic/**".format(v = ONEAPI_VERSION),
+        "ippcp/{v}/lib/pkgconfig/**".format(v = ONEAPI_VERSION),
+        "ippcp/{v}/opt/**".format(v = ONEAPI_VERSION),
+        "ippcp/{v}/share/**".format(v = ONEAPI_VERSION),
+        "mkl/{v}/bin/**".format(v = ONEAPI_VERSION),
+        "mkl/{v}/env/**".format(v = ONEAPI_VERSION),
+        "mkl/{v}/etc/**".format(v = ONEAPI_VERSION),
+        "mkl/{v}/include/**".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/lib*".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/pkgconfig/**".format(v = ONEAPI_VERSION),
+        "mkl/{v}/share/**".format(v = ONEAPI_VERSION),
+        "mpi/2021.15/bin/**",
+        "mpi/2021.15/env/**",
+        "mpi/2021.15/etc/**",
+        "mpi/2021.15/include/**",
+        "mpi/2021.15/lib/lib*",
+        "mpi/2021.15/lib/mpi/**",
+        "mpi/2021.15/lib/pkgconfig/**",
+        "mpi/2021.15/opt/**",
+        "mpi/2021.15/share/**",
+        "pti/0.12/**",
+        "tbb/2022.1/env/**",
+        "tbb/2022.1/etc/**",
+        "tbb/2022.1/include/**",
+        "tbb/2022.1/lib/lib*",
+        "tbb/2022.1/lib/pkgconfig/**",
+        "tbb/2022.1/share/**",
+        "tcm/1.3/**",
+        "umf/0.10/**",
+        "vtune/2025.3/**",
+    ]),
 )
 
-cc_toolchain(
-    name = "oneapi_cc_toolchain",
-    toolchain_identifier = "oneapi_nonhermetic_cc",
-    toolchain_config = ":toolchain_cfg",
-    all_files = ":all",
-    ar_files = ":all",
-    as_files = ":all",
-    compiler_files = ":all",
-    dwp_files = ":all",
-    linker_files = ":all",
-    objcopy_files = ":all",
-    strip_files = ":all",
-    supports_param_files = 1,
+oneapi_feature(
+    name = "binaries",
+    enabled = True,
+    lib_paths = [
+        ":compiler/{v}/lib".format(v = ONEAPI_VERSION),
+        ":compiler/{v}/compiler/lib/intel64_lin".format(v = ONEAPI_VERSION),
+    ],
+    icpx_path  = ":compiler/{v}/bin/icpx".format(v = ONEAPI_VERSION),
+    clang_path = ":compiler/{v}/bin/compiler/clang".format(v = ONEAPI_VERSION),
+    version = ONEAPI_VERSION,   # <-- use the variable
+    verbose = True,
+)
+
+filegroup(name = "clang",                 srcs = ["compiler/{v}/bin/compiler/clang".format(v = ONEAPI_VERSION)], visibility = ["//visibility:public"])
+filegroup(name = "clang++",               srcs = ["compiler/{v}/bin/compiler/clang++".format(v = ONEAPI_VERSION)], visibility = ["//visibility:public"])
+filegroup(name = "clang-offload-bundler", srcs = ["compiler/{v}/bin/compiler/clang-offload-bundler".format(v = ONEAPI_VERSION)])
+filegroup(name = "llvm-objcopy",          srcs = ["compiler/{v}/bin/compiler/llvm-objcopy".format(v = ONEAPI_VERSION)])
+filegroup(name = "ld",                    srcs = ["compiler/{v}/bin/compiler/ld.lld".format(v = ONEAPI_VERSION)], visibility = ["//visibility:public"])
+filegroup(name = "ar",                    srcs = ["compiler/{v}/bin/compiler/llvm-ar".format(v = ONEAPI_VERSION)], visibility = ["//visibility:public"])
+filegroup(name = "icpx",                  srcs = ["compiler/{v}/bin/icpx".format(v = ONEAPI_VERSION)])
+
+filegroup(
+    name = "asan_ignorelist",
+    srcs = ["compiler/{v}/lib/clang/{cv}/share/asan_ignorelist.txt".format(v = ONEAPI_VERSION, cv = CLANG_VERSION)],
     visibility = ["//visibility:public"],
 )
 
-toolchain(
-    name = "oneapi_cc_toolchain_registration",
-    toolchain = ":oneapi_cc_toolchain",
-    toolchain_type = "@rules_cc//cc:toolchain_type",
+cc_toolchain_import(
+    name = "includes",
+    hdrs = glob(["compiler/{v}/lib/clang/{cv}/include/**".format(v = ONEAPI_VERSION, cv = CLANG_VERSION)]),
+    includes = [
+        "compiler/{v}/lib/clang/{cv}".format(v = ONEAPI_VERSION, cv = CLANG_VERSION),
+        "compiler/{v}/lib/clang/{cv}/include".format(v = ONEAPI_VERSION, cv = CLANG_VERSION),
+    ],
+    target_compatible_with = select({"@platforms//os:linux": [], "@platforms//os:macos": []}),
     visibility = ["//visibility:public"],
 )
-# Restore the legacy headers target that downstream BUILD files expect.
+
+cc_toolchain_import(
+    name = "libclang_rt",
+    static_library = "compiler/{v}/lib/clang/{cv}/lib/x86_64-unknown-linux-gnu/libclang_rt.builtins.a".format(v = ONEAPI_VERSION, cv = CLANG_VERSION),
+    target_compatible_with = select({"@platforms//os:linux": [], "@platforms//os:macos": []}),
+    visibility = ["//visibility:public"],
+)
+
+cc_toolchain_import(
+    name = "includes_sycl",
+    hdrs = glob(["compiler/{v}/include/**".format(v = ONEAPI_VERSION)]),
+    includes = ["compiler/{v}/include".format(v = ONEAPI_VERSION)],
+)
+
+cc_toolchain_import(
+    name = "includes_mkl",
+    hdrs = glob(["mkl/{v}/include/**".format(v = ONEAPI_VERSION)]),
+    includes = ["mkl/{v}/include".format(v = ONEAPI_VERSION)],
+)
+
+cc_toolchain_import(
+    name = "core",
+    additional_libs = glob(["compiler/{v}/lib/*".format(v = ONEAPI_VERSION)]),
+    visibility = ["//visibility:public"],
+)
+
+cc_toolchain_import(
+    name = "mkl",
+    additional_libs = glob([
+        "mkl/{v}/lib/libmkl_intel_ilp64.s*".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sequential.s*".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_core.s*".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_*".format(v = ONEAPI_VERSION),
+    ]),
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "headers",
-    hdrs = [],  # no files—just exports include search paths
+    hdrs = glob([
+        "mkl/{v}/include/**".format(v = ONEAPI_VERSION),
+        "compiler/{v}/include/**".format(v = ONEAPI_VERSION),
+        "compiler/{v}/opt/compiler/include/**".format(v = ONEAPI_VERSION),
+    ]),
     includes = [
-        "compiler/2025.1/include",   # oneAPI SYCL/DPC++ headers
-        "mkl/2025.1/include",        # oneMKL headers (adjust/version as needed)
+        "mkl/{v}/include".format(v = ONEAPI_VERSION),
+        "compiler/{v}/include".format(v = ONEAPI_VERSION),
+        # IMPORTANT: includes entries are directories, not globs
+        "compiler/{v}/opt/compiler/include".format(v = ONEAPI_VERSION),
     ],
     visibility = ["//visibility:public"],
 )
 
-# A simple lib bundle other repos reference (ensure it's present)
 cc_library(
     name = "libs",
-    srcs = [],
-    linkopts = [
-        "-Wl,--enable-new-dtags",
-        # Add oneAPI lib search path(s) as needed
-        # "-Lmkl/2025.1/lib/intel64",
-        # "-Wl,-rpath,mkl/2025.1/lib/intel64",
-        # "-lmkl_intel_ilp64", "-lmkl_core", "-lmkl_sequential",
-    ],
+    srcs = glob([
+        "mkl/{v}/lib/libmkl_intel_ilp64.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sequential.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_core.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_stats.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_data_fitting.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_vm.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_lapack.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_dft.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_sparse.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_rng.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_blas.so".format(v = ONEAPI_VERSION),
+    ]),
+    data = glob([
+        "mkl/{v}/lib/libmkl_intel_ilp64.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sequential.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_core.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_stats.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_data_fitting.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_vm.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_lapack.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_dft.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_sparse.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_rng.so".format(v = ONEAPI_VERSION),
+        "mkl/{v}/lib/libmkl_sycl_blas.so".format(v = ONEAPI_VERSION),
+    ]),
+    linkopts = ["-Wl,-Bstatic,-lsvml,-lirng,-limf,-lirc,-lirc_s,-Bdynamic"],
+    linkstatic = 1,
+    visibility = ["//visibility:public"],
 )
