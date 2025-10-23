@@ -140,9 +140,5 @@ toolchain(
     name = "oneapi_cc_toolchain_registration",
     toolchain = ":oneapi_cc_toolchain",
     toolchain_type = "@rules_cc//cc:toolchain_type",
-    constraint_values = [
-        "@platforms//os:linux",
-        "@platforms//cpu:x86_64",
-    ],
     visibility = ["//visibility:public"],
 )
