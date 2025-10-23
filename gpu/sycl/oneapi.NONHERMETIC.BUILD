@@ -9,7 +9,8 @@ load(
     "cc_toolchain_import_feature",
 )
 load("@local_config_sycl//:nonhermetic_includes.bzl", "NONHERMETIC_INCLUDES")
-load("//third_party/rules_cc_toolchain:toolchain_config.bzl", "cc_toolchain_config")
+
+load("@rules_ml_toolchain//third_party/rules_cc_toolchain:toolchain_config.bzl", "cc_toolchain_config")
 
 
 # -- Tools (each alias must resolve to ONE existing file) ----------------------
@@ -64,22 +65,23 @@ cc_toolchain_import_feature(
 cc_toolchain_config(
     name = "toolchain_cfg",
     target_system_name = "local",
-    target_cpu = "x86_64",  # or "k8" if that’s what your config expects
-    # target_libc can stay "unknown" for non-hermetic
+    target_cpu = "x86_64",  # or "k8"
+    # Feature that *carries* the builtin include dirs:
+    includes_feature = ":includes_feature",   # <<— REQUIRED
 
-    # Enable features that define tool paths/flags and carry BuiltinIncludesInfo:
+    # Other features you want enabled by default:
     compiler_features = [
-        ":binaries",       
-        ":includes_feature",  
+        ":binaries",
+        ":includes_feature",  # fine to keep here as a FeatureInfo too
     ],
 
-    # Map tools to the aliases you defined above:
-    c_compiler = ":clang",    # maps to tool_paths["gcc"]
-    cc_compiler = ":clang++", # maps to tool_paths["cpp"]
+    # Map tools to your aliases:
+    c_compiler = ":clang",
+    cc_compiler = ":clang++",
     linker     = ":ld",
     archiver   = ":ar",
-
 )
+
 
 # -- Headers for normal code: NO GLOBS; just add include dirs (gives -I flags).
 cc_library(
