@@ -36,8 +36,6 @@ CompilationContextInfo = provider(
         "injected_headers": "The set of headers that are injected into every\
 compilation unit e.g. using -include.",
         "includes": "A depset of includes that configure this lib.",
-        "builtin_includes": "A depset of *toolchain builtin* include roots \
-(e.g. /usr/lib/clang/<ver>/include, /usr/include, GCC include{,-fixed}).",
         "frameworks": "A depset of frameworks that configure this lib. In the context of macOS,\
 frameworks are bundles of code and resources that provide specific functionalities to applications.",
     },
@@ -66,11 +64,10 @@ def _linking_context(
         additional_libs = additional_libs,
     )
 
-def _compilation_ctx(headers, injected_headers, includes, builtin_includes, frameworks):
+def _compilation_ctx(headers, injected_headers, includes, frameworks):
     return CompilationContextInfo(
         headers = headers,
         includes = includes,
-        builtin_includes = builtin_includes,
         frameworks = frameworks,
         injected_headers = injected_headers,
     )
@@ -96,7 +93,6 @@ def _cc_toolchain_import_impl(ctx):
     transitive_shared_libraries = []
     transitive_static_libraries = []
     transitive_includes = []
-    transitive_builtin_includes = []
     transitive_frameworks = []
     transitive_runtime_paths = []
     transitive_additional_libs = []
@@ -122,10 +118,6 @@ def _cc_toolchain_import_impl(ctx):
             dep[CcToolchainImportInfo].compilation_context.includes
             for dep in deps
         ]
-        transitive_builtin_includes = [
-            dep[CcToolchainImportInfo].compilation_context.builtin_includes
-            for dep in deps
-        ]
         transitive_frameworks = [
             dep[CcToolchainImportInfo].compilation_context.frameworks
             for dep in deps
@@ -139,9 +131,15 @@ def _cc_toolchain_import_impl(ctx):
             for dep in deps
         ]
 
-    includes = ctx.attr.includes or []
-    builtin_includes = ctx.attr.builtin_includes or []
-    frameworks = ctx.attr.frameworks or []
+    if not ctx.attr.includes:
+        includes = []
+    else:
+        includes = ctx.attr.includes
+
+    if not ctx.attr.frameworks:
+        frameworks = []
+    else:
+        frameworks = ctx.attr.frameworks
 
     compilation_context = _compilation_ctx(
         depset(ctx.files.hdrs, transitive = transitive_hdrs),
@@ -150,15 +148,8 @@ def _cc_toolchain_import_impl(ctx):
             [_normalise_include(ctx, inc) for inc in includes],
             transitive = transitive_includes,
             # Ensures that deps further down the tree are included last on the
-            # command line. This is important to ensure that #include_next
+            # command line. This is important to insure that #inlcude_next
             # works as expected.
-            order = "topological",
-        ),
-        depset(
-            # NOTE: builtin include roots are absolute or workspace-absolute,
-            # and are meant to feed the toolchain's cxx_builtin_include_directories.
-            builtin_includes,
-            transitive = transitive_builtin_includes,
             order = "topological",
         ),
         depset(
@@ -244,12 +235,7 @@ cc_toolchain_import = rule(
             default = [],
         ),
         "includes": attr.string_list(
-            doc = "List of includes to apply to the headers (emitted as -I/-isystem).",
-            default = [],
-        ),
-        "builtin_includes": attr.string_list(
-            doc = "List of *toolchain builtin* include roots (fed to \
-cxx_builtin_include_directories, NOT emitted as -I/-isystem).",
+            doc = "List of includes to apply to the headers",
             default = [],
         ),
         "frameworks": attr.string_list(
