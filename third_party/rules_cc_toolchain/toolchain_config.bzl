@@ -36,7 +36,7 @@ load(
     "tool",
     "tool_path",
 )
-load("//third_party/rules_cc_toolchain/features:feature.bzl", "BuiltinIncludesInfo")
+load("//third_party/rules_cc_toolchain/features:features.bzl", "BuiltinIncludesInfo")
 
 ALL_ACTIONS = [
     ACTION_NAMES.c_compile,
