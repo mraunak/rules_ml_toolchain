@@ -36,6 +36,7 @@ load(
     "tool",
     "tool_path",
 )
+load(":feature.bzl", "BuiltinIncludesInfo")
 
 ALL_ACTIONS = [
     ACTION_NAMES.c_compile,
@@ -104,15 +105,20 @@ def _create_artifact_name_patterns(ctx):
     return artifact_name_patterns
 
 def _cc_toolchain_config_impl(ctx):
+    # Action configs for link actions (unchanged)
     action_configs = [action_config(
         action_name = action,
         enabled = True,
         tools = [
             tool(ctx.attr.tool_paths["ld"]),
         ],
-        implies = [
-        ],
+        implies = [],
     ) for action in ACTION_NAME_GROUPS.all_cc_link_actions]
+
+    # NEW: pull builtin include dirs from the includes_feature
+    builtin_dirs = []
+    if hasattr(ctx.attr, "includes_feature") and ctx.attr.includes_feature:
+        builtin_dirs = ctx.attr.includes_feature[BuiltinIncludesInfo].dirs
 
     return cc_common.create_cc_toolchain_config_info(
         ctx = ctx,
@@ -139,6 +145,9 @@ def _cc_toolchain_config_impl(ctx):
             "ar": ctx.file.archiver,
             "in": ctx.file.install_name,
         })],
+        # KEY: register system/clang/GCC roots as *builtin* include dirs
+        cxx_builtin_include_directories = builtin_dirs,
+        # builtin_sysroot can remain unset for non-hermetic
     )
 
 cc_toolchain_config = rule(
@@ -180,6 +189,12 @@ cc_toolchain_config = rule(
             doc = "A list of features that are used by the toolchain.",
             mandatory = True,
         ),
+        # NEW: feature that wraps cc_toolchain_import(':includes') and carries builtin dirs
+        "includes_feature": attr.label(
+            providers = [BuiltinIncludesInfo],
+            doc = "Feature wrapping :includes; supplies builtin include dirs.",
+            mandatory = False,
+        ),
         "c_compiler": attr.label(
             doc = "The c compiler e.g. clang/gcc. Maps to tool path 'gcc'.",
             allow_single_file = True,
@@ -208,3 +223,4 @@ cc_toolchain_config = rule(
     },
     provides = [CcToolchainConfigInfo],
 )
+
