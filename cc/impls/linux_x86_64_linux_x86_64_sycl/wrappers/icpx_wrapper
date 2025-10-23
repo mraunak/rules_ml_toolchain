@@ -151,6 +151,22 @@ def apply_nonhermetic(flags):
   f = maybe_add_gcc_toolchain(f)
   return f
 
+# --- Helpers for link path ----------------------------------------------------
+
+def _ensure_flag(flags, pred, to_add):
+  """Prepend `to_add` if no element satisfies `pred`."""
+  return flags if any(pred(f) for f in flags) else [to_add] + flags
+
+def _gcc_libdir():
+  gcc = shutil.which('gcc')
+  if not gcc:
+    return None
+  r = subprocess.run([gcc, '-print-libgcc-file-name'], capture_output=True, text=True)
+  if r.return_code != 0:
+    return None
+  libgcc = r.stdout.strip()
+  return os.path.dirname(libgcc) if libgcc else None
+
 # --- Utilities ----------------------------------------------------------------
 
 def system(cmd):
@@ -327,15 +343,41 @@ def call_compiler(argv, link=False, sycl_compile=True):
       out_files.append('-o')
       out_files.extend(args.o[0])
 
-    deduped_flags += apply_nonhermetic(common_flags + in_files + out_files + link_flags)
+    # Build final link line from common flags + outputs + your link flags
+    link_line = apply_nonhermetic(common_flags + in_files + out_files + link_flags)
 
-    # Use a response file to avoid command-line length issues
+    # Drive lld through the *driver* so startfiles & runtimes get added
+    link_line = _ensure_flag(link_line, lambda f: f.startswith("-fuse-ld="), "-fuse-ld=lld")
+
+    # Ensure libstdc++ is selected with Clang (harmless if default)
+    link_line = _ensure_flag(link_line, lambda f: f.startswith("-stdlib="), "-stdlib=libstdc++")
+
+    # Add C++ runtime libs explicitly (covers the case when C driver would be used)
+    libdir = _gcc_libdir()
+    cxx_runtime = [
+      "-lstdc++",
+      "-lm",
+      "-lgcc_s",
+      "-lgcc",
+      "-lc",
+      "-lpthread",
+      "-ldl",
+    ]
+    if libdir:
+      link_line = ["-L" + libdir, "-Wl,-rpath," + libdir] + link_line
+
+    final_flags = deduped_flags + link_line + cxx_runtime
+
+    # Use a response file to avoid command line length issues
     with tempfile.NamedTemporaryFile("w", delete=False, suffix=".params") as f:
-      f.write('\n'.join(deduped_flags))
+      f.write('\n'.join(final_flags))
       response_file = f.name
 
-    cmd = f'{CPU_COMPILER} @{response_file}'
-    return system(cmd)
+    # Use the C++ driver for linking if available; fall back otherwise
+    driver = HOST_CXX or CPU_COMPILER or ONEAPI_COMPILER
+    if VERBOSE:
+      print(f"[link] {driver} @{response_file}", file=sys.stderr)
+    return system(f'{driver} @{response_file}')
 
   else:
     # Host compilation only
