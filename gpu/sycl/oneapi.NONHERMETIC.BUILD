@@ -3,9 +3,8 @@ package(default_visibility = ["//visibility:public"])
 load("@rules_ml_toolchain//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl", "cc_toolchain_import")
 load("@rules_ml_toolchain//gpu/sycl:oneapi_feature.bzl", "oneapi_feature")
 
-# Filled in by the repo rule
-ONEAPI_VERSION = "{{ONEAPI_VERSION}}"
-CLANG_VERSION  = "{{CLANG_VERSION}}"
+ONEAPI_VERSION = "2025.1"
+CLANG_VERSION = "20"
 
 filegroup(
     name = "all",
