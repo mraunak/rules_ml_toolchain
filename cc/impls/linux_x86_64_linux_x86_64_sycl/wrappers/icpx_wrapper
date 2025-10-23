@@ -24,6 +24,15 @@ DESCRIPTION:
   call DPC++ compiler for device-side code, and host
   compiler for other code.
 """
+from __future__ import print_function
+from argparse import ArgumentParser
+import os
+import subprocess
+import re
+import sys
+import shlex
+import tempfile
+
 
 ONEAPI_LIBRARY_PATH = os.environ['ONEAPI_LIBRARY_PATH']
 ONEAPI_VERSION = os.environ['ONEAPI_VERSION']
