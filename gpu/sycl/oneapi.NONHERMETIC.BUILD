@@ -18,11 +18,12 @@ cc_toolchain_import(
     builtin_includes = NONHERMETIC_INCLUDES,
 )
 
-# Feature that exposes the import (no -isystem additions)
 cc_toolchain_import_feature(
     name = "includes_feature",
     enabled = True,
     toolchain_import = ":includes",
+    use_lld = True,               # keep lld, driven by driver
+    inject_cxx_runtime = False,   # not needed if 'ld' is clang++
 )
 
 # Optional: your normal binary flags/paths feature
