@@ -62,91 +62,9 @@ def _create_dummy_repository(ctx):
     )
     ctx.file("sycl/BUILD", "")
 
-def _emit_nonhermetic_includes(ctx):
-    """Detect host builtin include dirs and write NONHERMETIC_INCLUDES."""
-    incs = []
-
-    def _add_if_dir(p):
-        if not p:
-            return
-        rp = ctx.path(p)
-        if rp.exists:
-            incs.append(str(rp.realpath))
-
-    # 1) Clang verbose search list (most robust)
-    clang = ctx.which("clang") or ctx.which("icpx")
-    if clang:
-        r = ctx.execute([clang, "-E", "-v", "-x", "c", "/dev/null", "-o", "/dev/null"])
-        if r.return_code == 0:
-            lines = r.stderr.splitlines()
-            in_block = False
-            for ln in lines:
-                if "search starts here:" in ln:
-                    in_block = True
-                    continue
-                if in_block and "End of search list." in ln:
-                    in_block = False
-                    break
-                if in_block:
-                    s = ln.strip()
-                    if s.startswith("/") and " (framework directory)" not in s:
-                        _add_if_dir(s)
-
-    # 2) Clang resource dir(s) (explicit)
-    for prog in ("clang", "icpx"):
-        p = ctx.which(prog)
-        if not p:
-            continue
-        r = ctx.execute([p, "-print-resource-dir"])
-        if r.return_code == 0:
-            rd = r.stdout.strip()
-            if rd:
-                _add_if_dir(rd + "/include")
-                # Debian/Ubuntu alias path: /usr/lib/clang/<ver>/include
-                parts = rd.strip("/").split("/")
-                ver = ""
-                if parts:
-                    ver = parts[-1]
-                    # Handle .../lib/clang/<ver> and .../clang/<ver>
-                    if ver and ver[0].isdigit():
-                        _add_if_dir("/usr/lib/clang/" + ver + "/include")
-
-    # --- Force-add common Clang alias (covers your system) ---
-    _add_if_dir("/usr/lib/clang/18/include")
-    _add_if_dir("/usr/lib/llvm-18/lib/clang/18/include")
-
-    # 3) System headers
-    _add_if_dir("/usr/include")
-
-    # 4) GCC include + include-fixed (compiler’s limits.h)
-    gcc = ctx.which("gcc")
-    if gcc:
-        r = ctx.execute([gcc, "-print-libgcc-file-name"])
-        if r.return_code == 0:
-            libgcc = r.stdout.strip()
-            if libgcc:
-                verdir = ctx.path(libgcc).dirname  # .../lib/gcc/<triple>/<ver>
-                _add_if_dir(str(verdir) + "/include")
-                _add_if_dir(str(verdir) + "/include-fixed")  # ensure include-fixed is present
-
-    # De-dup while preserving order
-    seen = {}
-    incs_dedup = []
-    for p in incs:
-        if p not in seen:
-            seen[p] = True
-            incs_dedup.append(p)
-
-    ctx.file(
-        "nonhermetic_includes.bzl",
-        "NONHERMETIC_INCLUDES = " + repr(incs_dedup) + "\n",
-    )
-
 def _sycl_configure_impl(ctx):
     if not enable_sycl(ctx):
         _create_dummy_repository(ctx)
-        # Also emit an empty includes file so load() never fails.
-        ctx.file("nonhermetic_includes.bzl", "NONHERMETIC_INCLUDES = []\n")
         return
 
     # SYCL is enabled: bake True/True in defs
@@ -160,21 +78,17 @@ def _sycl_configure_impl(ctx):
     )
 
     # Use the SAME façade in both hermetic and non-hermetic.
+    # Your sycl.BUILD should route to @oneapi (system-mounted) targets.
     ctx.file("sycl/BUILD", ctx.read(ctx.attr.build_file))
 
     # Make repo root a Bazel package
     ctx.file("BUILD", "")
 
-    # Emit host include roots for non-hermetic builds; write empty otherwise.
-    if ctx.getenv("SYCL_BUILD_HERMETIC", "1") == "0":
-        _emit_nonhermetic_includes(ctx)
-    else:
-        ctx.file("nonhermetic_includes.bzl", "NONHERMETIC_INCLUDES = []\n")
-
 sycl_configure = repository_rule(
     implementation = _sycl_configure_impl,
     local = True,
-    environ = ["TF_NEED_SYCL", "SYCL_BUILD_HERMETIC", "TF_ICPX_CLANG"],
+    # No need for SYCL_BUILD_HERMETIC anymore.
+    environ = ["TF_NEED_SYCL", "TF_ICPX_CLANG"],
     attrs = {
         "build_defs_tpl": attr.label(default = Label("//gpu/sycl:build_defs.bzl.tpl")),
         "build_file":     attr.label(default = Label("//gpu/sycl:sycl.BUILD")),
