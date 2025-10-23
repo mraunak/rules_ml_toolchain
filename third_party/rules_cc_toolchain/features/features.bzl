@@ -228,6 +228,7 @@ def _import_feature_impl(ctx):
             .compilation_context.includes.to_list()
     ]
     builtin_dirs = toolchain_import_info.compilation_context.builtin_includes.to_list()
+
     injected_include_flags = [
         "-include " + hdr.path
         for hdr in toolchain_import_info
@@ -273,46 +274,36 @@ def _import_feature_impl(ctx):
     ]).to_list()
 
     flag_sets = []
+
+    # Project-level includes (NOT the builtin dirs)
     if include_flags:
         flag_sets.append(flag_set(
             actions = ALL_CC_COMPILE_ACTION_NAMES,
-            flag_groups = [
-                flag_group(
-                    flags = include_flags,
-                ),
-            ],
+            flag_groups = [flag_group(flags = include_flags)],
         ))
+
     if framework_flags:
         flag_sets.append(flag_set(
             actions = ALL_CC_COMPILE_ACTION_NAMES,
-            flag_groups = [
-                flag_group(
-                    flags = framework_flags,
-                ),
-            ],
+            flag_groups = [flag_group(flags = framework_flags)],
         ))
+
     if injected_include_flags:
         flag_sets.append(flag_set(
             actions = ALL_CC_COMPILE_ACTION_NAMES,
-            flag_groups = [
-                flag_group(
-                    flags = injected_include_flags,
-                ),
-            ],
+            flag_groups = [flag_group(flags = injected_include_flags)],
         ))
 
+    # Generic link flags (search paths, libraries, rpaths)
     if linker_dir_flags or linker_flags or linker_runtime_path_flags:
         flag_sets.append(flag_set(
             actions = CC_LINK_EXECUTABLE_ACTION_NAMES,
-            flag_groups = [
-                flag_group(
-                    flags = linker_dir_flags +
-                            linker_flags +
-                            linker_runtime_path_flags,
-                ),
-            ],
+            flag_groups = [flag_group(
+                flags = linker_dir_flags + linker_flags + linker_runtime_path_flags
+            )],
         ))
 
+    # For shared objects: avoid startup CRT objects
     linker_flags_for_shared_obj = depset(_filter_for_shared_obj([
         _file_to_library_flag(file)
         for file in toolchain_import_info
@@ -326,12 +317,45 @@ def _import_feature_impl(ctx):
     if linker_dir_flags or linker_flags_for_shared_obj:
         flag_sets.append(flag_set(
             actions = [ACTION_NAMES.cpp_link_dynamic_library, ACTION_NAMES.cpp_link_nodeps_dynamic_library],
-            flag_groups = [
-                flag_group(
-                    flags = linker_dir_flags +
-                            linker_flags_for_shared_obj,
-                ),
-            ],
+            flag_groups = [flag_group(flags = linker_dir_flags + linker_flags_for_shared_obj)],
+        ))
+
+    # --- NEW: always drive lld via the driver (keeps C++ runtime/crt wired) ---
+    if ctx.attr.use_lld:
+        flag_sets.append(flag_set(
+            actions = ACTION_NAME_GROUPS.all_cc_link_actions,
+            flag_groups = [flag_group(flags = ["-fuse-ld=lld"])],
+        ))
+
+    # --- NEW: if you insist on using a pure ld.lld as 'ld', inject C++ runtime ---
+    if ctx.attr.inject_cxx_runtime:
+        # Restrict to C++ link actions so we don't pollute C-only links
+        cxx_link_actions = [
+            ACTION_NAMES.cpp_link_executable,
+            ACTION_NAMES.cpp_link_dynamic_library,
+            ACTION_NAMES.cpp_link_nodeps_dynamic_library,
+            ACTION_NAMES.cpp_link_static_library,
+        ]
+        cxx_runtime_flags = [
+            "-stdlib=libstdc++",  # harmless if default; ensures libstdc++ with Clang
+            "-lstdc++",
+            "-lm",
+            "-lgcc_s",
+            "-lgcc",
+            "-lc",
+            "-lpthread",
+            "-ldl",
+        ]
+        # Optional extra search path if you want to pass a GCC lib dir string here:
+        if ctx.attr.gcc_lib_dir:
+            cxx_runtime_flags = [
+                "-L" + ctx.attr.gcc_lib_dir,
+                "-Wl,-rpath," + ctx.attr.gcc_lib_dir,
+            ] + cxx_runtime_flags
+
+        flag_sets.append(flag_set(
+            actions = cxx_link_actions,
+            flag_groups = [flag_group(flags = cxx_runtime_flags)],
         ))
 
     library_feature = _feature(
@@ -341,7 +365,8 @@ def _import_feature_impl(ctx):
         implies = ctx.attr.implies,
         provides = ctx.attr.provides,
     )
-    return [library_feature, ctx.attr.toolchain_import[DefaultInfo],BuiltinIncludesInfo(dirs = builtin_dirs),]
+    # NOTE: builtin include dirs are carried via BuiltinIncludesInfo; do NOT emit them as -isystem
+    return [library_feature, ctx.attr.toolchain_import[DefaultInfo], BuiltinIncludesInfo(dirs = builtin_dirs)]
 
 cc_toolchain_import_feature = rule(
     _import_feature_impl,
@@ -351,9 +376,25 @@ cc_toolchain_import_feature = rule(
         "requires": attr.string_list(),
         "implies": attr.string_list(),
         "toolchain_import": attr.label(providers = [CcToolchainImportInfo]),
+        # NEW: keep lld but drive it via the driver (clang++), default True
+        "use_lld": attr.bool(
+            default = True,
+            doc = "Appends -fuse-ld=lld to all C/C++ link actions.",
+        ),
+        # NEW: if your ld tool is a pure ld.lld, inject C++ runtime libs for C++ links
+        "inject_cxx_runtime": attr.bool(
+            default = False,
+            doc = "Append -stdlib=libstdc++ and C++ runtime libs on C++ link actions.",
+        ),
+        # Optional: pass a GCC lib dir if you want to add -L/-rpath explicitly
+        "gcc_lib_dir": attr.string(
+            default = "",
+            doc = "Optional GCC runtime lib directory to add as -L and rpath.",
+        ),
     },
     provides = [FeatureInfo, DefaultInfo, BuiltinIncludesInfo],
 )
+
 
 def _sysroot_feature(ctx):
     return _feature(
