@@ -78,7 +78,7 @@ cc_toolchain_config(
     tool_paths = {
         "gcc": "compiler/2025.1/bin/compiler/clang",
         "cpp": "compiler/2025.1/bin/compiler/clang++",
-        "ld":  "compiler/2025.1/bin/compiler/ld.lld",
+        "ld":  "compiler/2025.1/bin/compiler/clang++",
         "ar":  "compiler/2025.1/bin/compiler/llvm-ar",
         "nm": "compiler/2025.1/bin/compiler/llvm-nm",
         "objdump": "compiler/2025.1/bin/compiler/llvm-objdump",
