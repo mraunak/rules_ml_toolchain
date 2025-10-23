@@ -86,6 +86,16 @@ toolchain(
     toolchain_type = "@rules_cc//cc:toolchain_type",
     visibility = ["//visibility:public"],
 )
+# Restore the legacy headers target that downstream BUILD files expect.
+cc_library(
+    name = "headers",
+    hdrs = [],  # no files—just exports include search paths
+    includes = [
+        "compiler/2025.1/include",   # oneAPI SYCL/DPC++ headers
+        "mkl/2025.1/include",        # oneMKL headers (adjust/version as needed)
+    ],
+    visibility = ["//visibility:public"],
+)
 
 # A simple lib bundle other repos reference (ensure it's present)
 cc_library(
