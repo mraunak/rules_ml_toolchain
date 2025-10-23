@@ -9,6 +9,8 @@ load(
     "cc_toolchain_import_feature",
 )
 load("@local_config_sycl//:nonhermetic_includes.bzl", "NONHERMETIC_INCLUDES")
+load("//third_party/rules_cc_toolchain:toolchain_config.bzl", "cc_toolchain_config")
+
 
 # -- Tools (each alias must resolve to ONE existing file) ----------------------
 
@@ -59,9 +61,24 @@ cc_toolchain_import_feature(
     enabled = True,
     toolchain_import = ":includes",
 )
-oneapi_toolchain(
+cc_toolchain_config(
     name = "toolchain_cfg",
-    includes_feature = ":includes_feature",
+    target_system_name = "local",
+    target_cpu = "x86_64",  # or "k8" if that’s what your config expects
+    # target_libc can stay "unknown" for non-hermetic
+
+    # Enable features that define tool paths/flags and carry BuiltinIncludesInfo:
+    compiler_features = [
+        ":binaries",       
+        ":includes_feature",  
+    ],
+
+    # Map tools to the aliases you defined above:
+    c_compiler = ":clang",    # maps to tool_paths["gcc"]
+    cc_compiler = ":clang++", # maps to tool_paths["cpp"]
+    linker     = ":ld",
+    archiver   = ":ar",
+
 )
 
 # -- Headers for normal code: NO GLOBS; just add include dirs (gives -I flags).
