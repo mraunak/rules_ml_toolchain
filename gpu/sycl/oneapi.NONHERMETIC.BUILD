@@ -4,7 +4,7 @@ load(
     "@rules_ml_toolchain//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl",
     "cc_toolchain_import",
 )
-load("@bazel_tools//tools/cpp:cc_toolchain.bzl", "cc_toolchain")
+load("@rules_cc//cc:defs.bzl", "cc_toolchain")
 load(
     "@rules_ml_toolchain//third_party/rules_cc_toolchain/features:features.bzl",
     "cc_toolchain_import_feature",
