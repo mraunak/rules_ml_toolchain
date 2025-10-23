@@ -51,6 +51,11 @@ cc_toolchain_config(
         "cpp": "compiler/2025.1/bin/compiler/clang++",
         "ld":  "compiler/2025.1/bin/compiler/clang++",  # drive lld via driver
         "ar":  "compiler/2025.1/bin/compiler/llvm-ar",
+        "nm": "compiler/2025.1/bin/compiler/llvm-nm",
+        "objdump": "compiler/2025.1/bin/compiler/llvm-objdump",
+        "strip": "compiler/2025.1/bin/compiler/llvm-strip",
+        "gcov": "compiler/2025.1/bin/llvm-cov",      # if needed
+        "llvm-cov": "compiler/2025.1/bin/llvm-cov",
     },
     c_compiler = ":clang",
     cc_compiler = ":clang++",
