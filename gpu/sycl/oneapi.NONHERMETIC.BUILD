@@ -4,6 +4,7 @@ load(
     "@rules_ml_toolchain//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl",
     "cc_toolchain_import",
 )
+load("@bazel_tools//tools/cpp:cc_toolchain.bzl", "cc_toolchain")
 load(
     "@rules_ml_toolchain//third_party/rules_cc_toolchain/features:features.bzl",
     "cc_toolchain_import_feature",
@@ -106,7 +107,6 @@ cc_library(
     ],
 )
 
-# -- Toolchain aggregator: FILES ONLY (no cc_library / no cc_toolchain_import) --
 filegroup(
     name = "all",
     srcs = [
@@ -117,7 +117,32 @@ filegroup(
         ":llvm-objcopy",
         ":ld",
         ":ar",
-        # Intentionally NOT including :headers, :libs, :includes, :core, :libclang_rt, :mkl, :binaries
-        # to avoid introducing CcInfo/providers into the toolchain dependency graph.
     ],
+)
+
+cc_toolchain(
+    name = "oneapi_cc_toolchain",
+    toolchain_identifier = "oneapi_nonhermetic_cc",
+    toolchain_config = ":toolchain_cfg",
+    all_files = ":all",
+    ar_files = ":all",
+    as_files = ":all",
+    compiler_files = ":all",
+    dwp_files = ":all",
+    linker_files = ":all",
+    objcopy_files = ":all",
+    strip_files = ":all",
+    supports_param_files = 1,
+    visibility = ["//visibility:public"],
+)
+
+toolchain(
+    name = "oneapi_cc_toolchain_registration",
+    toolchain = ":oneapi_cc_toolchain",
+    toolchain_type = "@rules_cc//cc:toolchain_type",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    visibility = ["//visibility:public"],
 )
