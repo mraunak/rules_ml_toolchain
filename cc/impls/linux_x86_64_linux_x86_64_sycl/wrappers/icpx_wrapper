@@ -352,29 +352,25 @@ def call_compiler(argv, link=False, sycl_compile=True):
     # Ensure libstdc++ is selected with Clang (harmless if default)
     link_line = _ensure_flag(link_line, lambda f: f.startswith("-stdlib="), "-stdlib=libstdc++")
 
-    # Add C++ runtime libs explicitly (covers the case when C driver would be used)
-    libdir = _gcc_libdir()
-    cxx_runtime = [
-      "-lstdc++",
-      "-lm",
-      "-lgcc_s",
-      "-lgcc",
-      "-lc",
-      "-lpthread",
-      "-ldl",
-    ]
-    if libdir:
-      link_line = ["-L" + libdir, "-Wl,-rpath," + libdir] + link_line
+    # Choose driver and only inject C++ runtime if we ended up with a C driver
+    driver = HOST_CXX or CPU_COMPILER or ONEAPI_COMPILER
+    base = os.path.basename(driver) if driver else ""
+    using_cxx_driver = ("++" in base) or ("clang++" in base)
 
-    final_flags = deduped_flags + link_line + cxx_runtime
+    if not using_cxx_driver:
+      # Fallback: add C++ runtime explicitly for C driver
+      libdir = _gcc_libdir()
+      if libdir:
+        link_line = ["-L" + libdir, "-Wl,-rpath," + libdir] + link_line
+      link_line = link_line + ["-lstdc++", "-lm", "-lgcc_s", "-lgcc", "-lc", "-lpthread", "-ldl"]
+
+    final_flags = deduped_flags + link_line
 
     # Use a response file to avoid command line length issues
     with tempfile.NamedTemporaryFile("w", delete=False, suffix=".params") as f:
       f.write('\n'.join(final_flags))
       response_file = f.name
 
-    # Use the C++ driver for linking if available; fall back otherwise
-    driver = HOST_CXX or CPU_COMPILER or ONEAPI_COMPILER
     if VERBOSE:
       print(f"[link] {driver} @{response_file}", file=sys.stderr)
     return system(f'{driver} @{response_file}')
