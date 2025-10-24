@@ -48,5 +48,6 @@ cc_feature(
         "-DMKL_ILP64",
         "-fPIC",
         "-fsycl", 
+        "-DLLVM_THREAD_LOCAL=thread_local", 
     ],
 )
