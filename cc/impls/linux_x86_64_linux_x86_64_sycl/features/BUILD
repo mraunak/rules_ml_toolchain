@@ -42,16 +42,11 @@ cc_rpath_feature(
 
 cc_feature(
     name = "sycl_defaults",
-    enabled = True,  # always on for this SYCL toolchain
-    defines = [
-        "TENSORFLOW_USE_SYCL=1",
-        "MKL_ILP64",
-    ],
-    compiler_flags = [
+    enabled = True, 
+    cc_flags = [
+        "-DTENSORFLOW_USE_SYCL=1",
+        "-DMKL_ILP64",
         "-fPIC",
-    ],
-    # If your wrappers don't already add it, include the front-end switch:
-    cxx_flags = [
-        "-fsycl",
+        "-fsycl", 
     ],
 )
