@@ -14,6 +14,8 @@
 # ==============================================================================
 
 load("//cc/impls/linux_x86_64_linux_x86_64_sycl/features:rpath_feature.bzl", "cc_rpath_feature")
+load("//cc/impls/linux_x86_64_linux_x86_64_sycl/features:sycl_defaults.bzl",
+     "sycl_default_features")
 load(
     "//third_party/rules_cc_toolchain/features:features.bzl",
     "cc_feature",
