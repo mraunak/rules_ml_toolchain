@@ -37,3 +37,19 @@ cc_rpath_feature(
     name = "runtime_library_search_directories",
     enabled = True,
 )
+
+cc_feature(
+    name = "sycl_defaults",
+    enabled = True,  # always on for this SYCL toolchain
+    defines = [
+        "TENSORFLOW_USE_SYCL=1",
+        "MKL_ILP64",
+    ],
+    compiler_flags = [
+        "-fPIC",
+    ],
+    # If your wrappers don't already add it, include the front-end switch:
+    cxx_flags = [
+        "-fsycl",
+    ],
+)
