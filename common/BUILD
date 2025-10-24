@@ -107,13 +107,13 @@ bool_flag(
 config_setting(
     name = "is_sycl_enabled",
     flag_values = {
-        ":enable_sycl": "True",
+        ":enable_sycl": "true",
     },
 )
 
 config_setting(
     name = "is_sycl_disabled",
     flag_values = {
-        ":enable_sycl": "False",
+        ":enable_sycl": "false",
     },
 )
