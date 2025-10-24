@@ -33,10 +33,6 @@ import sys
 import shlex
 import tempfile
 
-WRAPPER_DIR = os.path.dirname(os.path.abspath(__file__))
-FORCE_TL_H = os.path.normpath(
-    os.path.join(WRAPPER_DIR, "..", "headers", "force_thread_local.h")
-)
 ONEAPI_LIBRARY_PATH = os.environ['ONEAPI_LIBRARY_PATH']
 ONEAPI_VERSION = os.environ['ONEAPI_VERSION']
 
@@ -104,8 +100,6 @@ def call_compiler(argv, link = False, sycl_compile = True):
   common_flags.append("-fno-finite-math-only")
   common_flags.append("-fno-fast-math")
   common_flags.append("-fexceptions")
-  common_flags.append("-ULLVM_THREAD_LOCAL")
-  common_flags.append("-DLLVM_THREAD_LOCAL=thread_local")
 
   compile_flags = []
   compile_flags.append('-DDNNL_GRAPH_WITH_SYCL=1')
