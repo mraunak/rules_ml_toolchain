@@ -191,7 +191,7 @@ cc_toolchain_config(
         "//cc/features:supports_start_end_lib_feature",
         "//cc/impls/linux_x86_64_linux_x86_64_sycl/features:no_as_needed",
         "//cc/impls/linux_x86_64_linux_x86_64_sycl/features:runtime_library_search_directories",
-        "//cc/impls/linux_x86_64_linux_x86_64_sycl/features:sycl_deafults",
+        "//cc/impls/linux_x86_64_linux_x86_64_sycl/features:sycl_defaults",
     ],
     linker = "@oneapi//:ld",
     target_cpu = "x86_64",
