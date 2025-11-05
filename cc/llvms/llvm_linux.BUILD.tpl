@@ -45,7 +45,7 @@ alias(
 
 # Used as single file target in NCCL
 alias(
-    name = "ar_tool",
+    name = "llvm-ar",
     actual = "@@%{llvm_repo_name}//:bin/llvm-ar",
     visibility = ["//visibility:public"],
 )
@@ -53,6 +53,24 @@ alias(
 alias(
     name = "ar_darwin",
     actual = "@@%{llvm_repo_name}//:ar_darwin",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "objcopy",
+    actual = "@@%{llvm_repo_name}//:objcopy",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "llvm-objcopy",
+    actual = "@@%{llvm_repo_name}//:bin/llvm-objcopy",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "strip",
+    actual = "@@%{llvm_repo_name}//:strip",
     visibility = ["//visibility:public"],
 )
 

@@ -160,6 +160,26 @@ filegroup(
     ],
 )
 
+# buildifier: leave-alone
+filegroup(
+    name = "objcopy",
+    srcs = [
+        ":wrappers",
+        "@llvm_linux_x86_64//:objcopy",
+        "@llvm_linux_x86_64//:distro_libs",
+    ],
+)
+
+# buildifier: leave-alone
+filegroup(
+    name = "strip",
+    srcs = [
+        ":wrappers",
+        "@llvm_linux_x86_64//:strip",
+        "@llvm_linux_x86_64//:distro_libs",
+    ],
+)
+
 cc_toolchain_config(
     name = "config",
     archiver = "@llvm_linux_x86_64//:ar",
@@ -210,6 +230,7 @@ cc_toolchain_config(
         "//cc/features:supports_start_end_lib_feature",
     ],
     linker = "@llvm_linux_x86_64//:ld",
+    strip_tool = "@llvm_linux_x86_64//:strip",
     target_cpu = "x86_64",
     target_system_name = "local",
     tool_paths = CUDA_TOOLS,
@@ -222,8 +243,8 @@ cc_toolchain(
     compiler_files = ":compiler",
     dwp_files = ":all",
     linker_files = ":linker",
-    objcopy_files = ":empty",
-    strip_files = ":empty",
+    objcopy_files = ":objcopy",
+    strip_files = ":strip",
     supports_param_files = 1,
     toolchain_config = ":config",
     toolchain_identifier = "toolchain_linux_x86_64_linux_x86_64_id",

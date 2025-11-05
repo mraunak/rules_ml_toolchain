@@ -13,18 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 
-package(default_visibility = ["//visibility:public"])
-
-filegroup(
-    name = "all",
-    srcs = [
-        "ar",
-        "clang",
-        "clang++",
-        "idler",
-        "ld",
-        "nvcc_wrapper",
-        "objcopy",
-    ],
+alias(
+    name = "llvm-objcopy",
+    actual = select({
+        "@bazel_tools//src/conditions:linux_x86_64": "@llvm_linux_x86_64//:llvm-objcopy",
+        "@bazel_tools//src/conditions:linux_aarch64": "@llvm_linux_aarch64//:llvm-objcopy",
+        "@bazel_tools//src/conditions:darwin_arm64": "@llvm_darwin_aarch64//:llvm-objcopy",
+        "//conditions:default": ":empty",
+    }),
     visibility = ["//visibility:public"],
 )
