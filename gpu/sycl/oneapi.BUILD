@@ -129,83 +129,83 @@ oneapi_feature(
 filegroup(
     name = "clang",
     srcs = [
-        "compiler/{oneapi_version}/bin/compiler/clang".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/bin/compiler/clang".format(oneapi_version = ONEAPI_VERSION),
     ],
 )
 
 filegroup(
     name = "clang++",
     srcs = [
-        "compiler/{oneapi_version}/bin/compiler/clang++".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/bin/compiler/clang++".format(oneapi_version = ONEAPI_VERSION),
     ],
 )
 
 filegroup(
     name = "clang-offload-bundler",
     srcs = [
-        "compiler/{oneapi_version}/bin/compiler/clang-offload-bundler".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/bin/compiler/clang-offload-bundler".format(oneapi_version = ONEAPI_VERSION),
     ],
 )
 
 filegroup(
     name = "clang-offload-wrapper",
     srcs = [
-        "compiler/{oneapi_version}/bin/compiler/clang-offload-wrapper".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/bin/compiler/clang-offload-wrapper".format(oneapi_version = ONEAPI_VERSION),
     ],
 )
 
 filegroup(
     name = "file-table-tform",
     srcs = [
-        "compiler/{oneapi_version}/bin/compiler/file-table-tform".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/bin/compiler/file-table-tform".format(oneapi_version = ONEAPI_VERSION),
     ],
 )
 
 filegroup(
     name = "spirv-to-ir-wrapper",
     srcs = [
-        "compiler/{oneapi_version}/bin/compiler/spirv-to-ir-wrapper".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/bin/compiler/spirv-to-ir-wrapper".format(oneapi_version = ONEAPI_VERSION),
     ],
 )
 
 filegroup(
     name = "sycl-post-link",
     srcs = [
-        "compiler/{oneapi_version}/bin/compiler/sycl-post-link".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/bin/compiler/sycl-post-link".format(oneapi_version = ONEAPI_VERSION),
     ],
 )
 
 filegroup(
     name = "llvm-foreach",
     srcs = [
-        "compiler/{oneapi_version}/bin/compiler/llvm-foreach".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/bin/compiler/llvm-foreach".format(oneapi_version = ONEAPI_VERSION),
     ],
 )
 filegroup(
     name = "llvm-objcopy",
     srcs = [
-        "compiler/{oneapi_version}/bin/compiler/llvm-objcopy".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/bin/compiler/llvm-objcopy".format(oneapi_version = ONEAPI_VERSION),
     ],
 )
 
 filegroup(
     name = "llvm-link",
     srcs = [
-        "compiler/{oneapi_version}/bin/compiler/llvm-link".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/bin/compiler/llvm-link".format(oneapi_version = ONEAPI_VERSION),
     ],
 )
 
 filegroup(
     name = "llvm-spirv",
     srcs = [
-        "compiler/{oneapi_version}/bin/compiler/llvm-spirv".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/bin/compiler/llvm-spirv".format(oneapi_version = ONEAPI_VERSION),
     ],
 )
 
 filegroup(
     name = "ld",
     srcs = [
-        "compiler/{oneapi_version}/bin/compiler/ld.lld".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/bin/compiler/ld.lld".format(oneapi_version = ONEAPI_VERSION),
     ],
     visibility = ["//visibility:public"],
 )
@@ -213,7 +213,7 @@ filegroup(
 filegroup(
     name = "ar",
     srcs = [
-        "compiler/{oneapi_version}/bin/compiler/llvm-ar".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/bin/compiler/llvm-ar".format(oneapi_version = ONEAPI_VERSION),
     ],
     visibility = ["//visibility:public"],
 )
@@ -221,14 +221,14 @@ filegroup(
 filegroup(
     name = "icpx",
     srcs = [
-        "compiler/{oneapi_version}/bin/icpx".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/bin/icpx".format(oneapi_version = ONEAPI_VERSION),
     ],
 )
 
 filegroup(
     name = "asan_ignorelist",
     srcs = [
-        "compiler/{oneapi_version}/lib/clang/{clang_version}/share/asan_ignorelist.txt"
+        "/opt/intel/oneapi/compiler/{oneapi_version}/lib/clang/{clang_version}/share/asan_ignorelist.txt"
             .format(oneapi_version = ONEAPI_VERSION, clang_version = CLANG_VERSION),
     ],
     visibility = ["//visibility:public"],
@@ -237,13 +237,13 @@ filegroup(
 cc_toolchain_import(
     name = "includes",
     hdrs = glob([
-        "compiler/{oneapi_version}/lib/clang/{clang_version}/include/**"
+        "/opt/intel/oneapi/compiler/{oneapi_version}/lib/clang/{clang_version}/include/**"
             .format(oneapi_version = ONEAPI_VERSION, clang_version = CLANG_VERSION),
     ]),
     includes = [
-        "compiler/{oneapi_version}/lib/clang/{clang_version}"
+        "/opt/intel/oneapi/compiler/{oneapi_version}/lib/clang/{clang_version}"
             .format(oneapi_version = ONEAPI_VERSION, clang_version = CLANG_VERSION),
-        "compiler/{oneapi_version}/lib/clang/{clang_version}/include"
+        "/opt/intel/oneapi/compiler/{oneapi_version}/lib/clang/{clang_version}/include"
             .format(oneapi_version = ONEAPI_VERSION, clang_version = CLANG_VERSION),
     ],
     target_compatible_with = select({
@@ -257,7 +257,7 @@ cc_toolchain_import(
 # built-in functions, and these functions are not provided by GCC 8.4.
 cc_toolchain_import(
     name = "libclang_rt",
-    static_library = "compiler/{oneapi_version}/lib/clang/{clang_version}/lib/x86_64-unknown-linux-gnu/libclang_rt.builtins.a"
+    static_library = "/opt/intel/oneapi/compiler/{oneapi_version}/lib/clang/{clang_version}/lib/x86_64-unknown-linux-gnu/libclang_rt.builtins.a"
         .format(oneapi_version = ONEAPI_VERSION, clang_version = CLANG_VERSION),
     target_compatible_with = select({
         "@platforms//os:linux": [],
@@ -269,27 +269,27 @@ cc_toolchain_import(
 cc_toolchain_import(
     name = "includes_sycl",
     hdrs = glob([
-        "compiler/{oneapi_version}/include/**".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/include/**".format(oneapi_version = ONEAPI_VERSION),
     ]),
     includes = [
-        "compiler/{oneapi_version}/include".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/include".format(oneapi_version = ONEAPI_VERSION),
     ],
 )
 
 cc_toolchain_import(
     name = "includes_mkl",
     hdrs = glob([
-        "mkl/{oneapi_version}/include/**".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/include/**".format(oneapi_version = ONEAPI_VERSION),
     ]),
     includes = [
-        "mkl/{oneapi_version}/include".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/include".format(oneapi_version = ONEAPI_VERSION),
     ],
 )
 
 cc_toolchain_import(
     name = "core",
     additional_libs = glob([
-        "compiler/{oneapi_version}/lib/*".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/lib/*".format(oneapi_version = ONEAPI_VERSION),
     ]),
     visibility = ["//visibility:public"],
 )
@@ -297,10 +297,10 @@ cc_toolchain_import(
 cc_toolchain_import(
     name = "mkl",
     additional_libs = glob([
-        "mkl/{oneapi_version}/lib/libmkl_intel_ilp64.s*".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sequential.s*".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_core.s*".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_*".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_intel_ilp64.s*".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sequential.s*".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_core.s*".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_*".format(oneapi_version = ONEAPI_VERSION),
     ]),
     visibility = ["//visibility:public"],
 )
@@ -308,12 +308,12 @@ cc_toolchain_import(
 cc_library(
     name = "headers",
     hdrs = glob([
-        "mkl/{oneapi_version}/include/**".format(oneapi_version = ONEAPI_VERSION),
-        "compiler/{oneapi_version}/include/**".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/include/**".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/include/**".format(oneapi_version = ONEAPI_VERSION),
     ]),
     includes = [
-        "mkl/{oneapi_version}/include".format(oneapi_version = ONEAPI_VERSION),
-        "compiler/{oneapi_version}/include".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/include".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/compiler/{oneapi_version}/include".format(oneapi_version = ONEAPI_VERSION),
     ],
     visibility = ["//visibility:public"],
 )
@@ -321,30 +321,30 @@ cc_library(
 cc_library(
     name = "libs",
     srcs = glob([
-        "mkl/{oneapi_version}/lib/libmkl_intel_ilp64.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sequential.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_core.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_stats.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_data_fitting.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_vm.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_lapack.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_dft.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_sparse.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_rng.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_blas.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_intel_ilp64.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sequential.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_core.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_stats.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_data_fitting.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_vm.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_lapack.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_dft.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_sparse.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_rng.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_blas.so".format(oneapi_version = ONEAPI_VERSION),
     ]),
     data = glob([
-        "mkl/{oneapi_version}/lib/libmkl_intel_ilp64.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sequential.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_core.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_stats.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_data_fitting.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_vm.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_lapack.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_dft.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_sparse.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_rng.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_sycl_blas.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_intel_ilp64.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sequential.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_core.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_stats.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_data_fitting.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_vm.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_lapack.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_dft.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_sparse.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_rng.so".format(oneapi_version = ONEAPI_VERSION),
+        "/opt/intel/oneapi/mkl/{oneapi_version}/lib/libmkl_sycl_blas.so".format(oneapi_version = ONEAPI_VERSION),
     ]),
     linkopts = ["-Wl,-Bstatic,-lsvml,-lirng,-limf,-lirc,-lirc_s,-Bdynamic"],
     linkstatic = 1,
