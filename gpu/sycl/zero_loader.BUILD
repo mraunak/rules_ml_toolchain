@@ -49,12 +49,15 @@ cc_toolchain_import(
 
 cc_library(
     name = "libze_loader",
-    srcs = [
-        "lib/libze_loader.so",
-    ],
-    data = [
-        "lib/libze_loader.so",
-    ],
+    srcs = glob([
+        "/usr/lib/x86_64-linux-gnu/libze_loader.so*",
+        "/usr/lib/x86_64-linux-gnu/liblevel_zero_utils.a",
+        "/usr/lib/x86_64-linux-gnu/libze_null.so*",
+        "/usr/lib/x86_64-linux-gnu/libze_tracing_layer.so*",
+    ]),
+    data = ([
+        "/usr/lib/x86_64-linux-gnu/lib/libze_loader.so.1",
+    ]),
     linkstatic = 1,
     visibility = ["//visibility:public"],
 )
