@@ -31,7 +31,7 @@ package(
 filegroup(
     name = "all",
     srcs = glob([
-            "include/**/*",
+            "/usr/include/**/*",
         ],
     ),
     visibility = ["//visibility:public"],
@@ -41,7 +41,7 @@ filegroup(
 cc_library(
     name = "headers",
     hdrs = glob([
-        "level_zero/**/*",
+        "/usr/include/level_zero/**/*",
     ]),
     includes = [
         ".",
