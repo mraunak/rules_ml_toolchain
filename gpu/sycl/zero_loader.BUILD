@@ -61,3 +61,14 @@ cc_library(
     linkstatic = 1,
     visibility = ["//visibility:public"],
 )
+
+filegroup(
+    name = "runtime_files",
+    srcs = glob([
+        "lib/libze_loader.so*",
+        "lib/liblevel_zero_utils.a",
+        "lib/libze_null.so*",
+        "lib/libze_tracing_layer.so*",
+    ]),
+    visibility = ["//visibility:public"],
+)
