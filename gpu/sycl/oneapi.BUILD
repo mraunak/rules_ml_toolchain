@@ -318,3 +318,23 @@ cc_library(
     linkstatic = 1,
     visibility = ["//visibility:public"],
 )
+
+filegroup(
+    name = "runtime_files",
+    srcs = glob([
+        "compiler/{oneapi_version}/lib/libsycl.so.8".format(oneapi_version = ONEAPI_VERSION),
+        "compiler/{oneapi_version}/lib/libirc.so".format(oneapi_version = ONEAPI_VERSION),
+        "compiler/{oneapi_version}/lib/libur_loader.so.0".format(oneapi_version = ONEAPI_VERSION),
+        "compiler/{oneapi_version}/lib/libimf.so".format(oneapi_version = ONEAPI_VERSION),
+        "compiler/{oneapi_version}/lib/libintlc.so.5".format(oneapi_version = ONEAPI_VERSION),
+        "compiler/{oneapi_version}/lib/libsvml.so".format(oneapi_version = ONEAPI_VERSION),
+        "compiler/{oneapi_version}/lib/libirng.so".format(oneapi_version = ONEAPI_VERSION),
+        "compiler/{oneapi_version}/lib/libOpenCL.so*".format(oneapi_version = ONEAPI_VERSION),
+        "{oneapi_version}/lib/libumf.so*".format(oneapi_version = ONEAPI_VERSION),
+        "{oneapi_version}/lib/libhwloc.so.15".format(oneapi_version = ONEAPI_VERSION),
+        "{oneapi_version}/lib/libur_loader.so*".format(oneapi_version = ONEAPI_VERSION),
+        "{oneapi_version}/lib/libur_adapter_level_zero.so*".format(oneapi_version = ONEAPI_VERSION),
+        "{oneapi_version}/lib/libur_adapter_opencl.so*".format(oneapi_version = ONEAPI_VERSION),
+    ]),
+    visibility = ["//visibility:public"],
+)
