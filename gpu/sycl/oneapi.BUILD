@@ -338,7 +338,7 @@ cc_library(
         "{oneapi_version}/lib/libur_adapter_opencl.so*".format(oneapi_version = ONEAPI_VERSION),
         "mkl/{oneapi_version}/lib/libmkl_intel_ilp64.so".format(oneapi_version = ONEAPI_VERSION),
         "mkl/{oneapi_version}/lib/libmkl_sequential.so".format(oneapi_version = ONEAPI_VERSION),
-        "mkl/{oneapi_version}/lib/libmkl_core.so".format(oneapi_version = ONEAPI_VERSION),
+        "mkl/{oneapi_version}/lib/libmkl_core.so.2".format(oneapi_version = ONEAPI_VERSION),
         "mkl/{oneapi_version}/lib/libmkl_sycl_stats.so".format(oneapi_version = ONEAPI_VERSION),
         "mkl/{oneapi_version}/lib/libmkl_sycl_data_fitting.so".format(oneapi_version = ONEAPI_VERSION),
         "mkl/{oneapi_version}/lib/libmkl_sycl_vm.so".format(oneapi_version = ONEAPI_VERSION),
