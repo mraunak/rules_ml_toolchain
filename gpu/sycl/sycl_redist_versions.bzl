@@ -15,7 +15,7 @@
 
 REDIST_DICT = {
     "oneapi": {
-         "ubuntu_24.10_2026.0": [
+         "ubuntu_25.04_2026.0": [
             "https://tensorflow-file-hosting.s3.us-east-1.amazonaws.com/intel-oneapi-base-toolkit-2026.0.0.tar.gz",
             "3ca75a88f9086af24fd3b6530c52442d6561b1465281a3e61ac56a6ffc8ab8df",
             "oneapi",
@@ -42,9 +42,19 @@ REDIST_DICT = {
             "e0ff1c6cb9b551019579a2dd35c3a611240c1b60918c75345faf9514142b9c34",
             "level-zero-1.21.10",
         ],
+        "ubuntu_25.04_2026.0": [
+            "https://tensorflow-file-hosting.s3.us-east-1.amazonaws.com/level-zero-1.21.10.tar.gz",
+            "e0ff1c6cb9b551019579a2dd35c3a611240c1b60918c75345faf9514142b9c34",
+            "level-zero-1.21.10",
+        ],
     },
     "zero_loader": {
         "ubuntu_24.10_2025.1": [
+            "https://tensorflow-file-hosting.s3.us-east-1.amazonaws.com/ze_loader_libs.tar.gz",
+            "71cbfd8ac59e1231f013e827ea8efe6cf5da36fad771da2e75e202423bd6b82e",
+            "",
+        ],
+        "ubuntu_25.04_2026.0": [
             "https://tensorflow-file-hosting.s3.us-east-1.amazonaws.com/ze_loader_libs.tar.gz",
             "71cbfd8ac59e1231f013e827ea8efe6cf5da36fad771da2e75e202423bd6b82e",
             "",
@@ -56,7 +66,7 @@ BUILD_TEMPLATES = {
     "oneapi": {
         "repo_name": "oneapi",
         "version_to_template": {
-            "ubuntu_24.10_2026.0": "//gpu/sycl:oneapi.BUILD",
+            "ubuntu_25.04_2026.0": "//gpu/sycl:oneapi.BUILD",
             "ubuntu_24.10_2025.1": "//gpu/sycl:oneapi.BUILD",
             "ubuntu_24.04_2025.1": "//gpu/sycl:oneapi.BUILD",
             "ubuntu_22.04_2025.1": "//gpu/sycl:oneapi.BUILD",
@@ -65,12 +75,14 @@ BUILD_TEMPLATES = {
     "level_zero": {
         "repo_name": "level_zero",
         "version_to_template": {
+            "ubuntu_25.04_2026.0": "//gpu/sycl:level_zero.BUILD",
             "ubuntu_24.10_2025.1": "//gpu/sycl:level_zero.BUILD",
         },
     },
     "zero_loader": {
         "repo_name": "zero_loader",
         "version_to_template": {
+            "ubuntu_25.04_2026.0": "//gpu/sycl:zero_loader.BUILD",
             "ubuntu_24.10_2025.1": "//gpu/sycl:zero_loader.BUILD",
         },
     },
