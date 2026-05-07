@@ -15,6 +15,11 @@
 
 REDIST_DICT = {
     "oneapi": {
+         "ubuntu_24.10_2026.0": [
+            "https://tensorflow-file-hosting.s3.us-east-1.amazonaws.com/intel-oneapi-base-toolkit-2026.0.0.tar.gz",
+            "3ca75a88f9086af24fd3b6530c52442d6561b1465281a3e61ac56a6ffc8ab8df",
+            "oneapi",
+        ],
         "ubuntu_24.10_2025.1": [
             "https://tensorflow-file-hosting.s3.us-east-1.amazonaws.com/intel-oneapi-base-toolkit-2025.1.3.7.tar.gz",
             "2213104bd122336551aa144512e7ab99e4a84220e77980b5f346edc14ebd458a",
@@ -51,6 +56,7 @@ BUILD_TEMPLATES = {
     "oneapi": {
         "repo_name": "oneapi",
         "version_to_template": {
+            "ubuntu_24.10_2026.0": "//gpu/sycl:oneapi.BUILD",
             "ubuntu_24.10_2025.1": "//gpu/sycl:oneapi.BUILD",
             "ubuntu_24.04_2025.1": "//gpu/sycl:oneapi.BUILD",
             "ubuntu_22.04_2025.1": "//gpu/sycl:oneapi.BUILD",
