@@ -16,8 +16,8 @@
 REDIST_DICT = {
     "oneapi": {
          "ubuntu_25.04_2026.0": [
-            "https://tensorflow-file-hosting.s3.us-east-1.amazonaws.com/intel-oneapi-base-toolkit-2026.0.0.tar.gz",
-            "5be1c601823f4a3ada14be68525d4f0e8c1b833b83860726d9d4f2d53ee77e93",
+            "https://d3q76yfpnzmnjx.cloudfront.net/intel-oneapi-base-toolkit-2026.0.0.tar.gz ",
+            "1d8633ef69020ecb8f495979c56c6a9db0a3d1343a0697863dcf7fba097a369b",
             "oneapi",
         ],
         "ubuntu_24.10_2025.1": [
