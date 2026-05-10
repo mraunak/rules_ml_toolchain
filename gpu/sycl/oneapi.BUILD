@@ -323,7 +323,7 @@ cc_library(
 cc_library(
     name = "libs",
     srcs = glob([
-        "compiler/{oneapi_version}/lib/libsycl.so.8".format(oneapi_version = ONEAPI_VERSION),
+        "compiler/{oneapi_version}/lib/libsycl.so.9".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/lib/libirc.so".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/lib/libur_loader.so.0".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/lib/libimf.so".format(oneapi_version = ONEAPI_VERSION),
