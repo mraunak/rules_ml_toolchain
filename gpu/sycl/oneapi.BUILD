@@ -330,7 +330,7 @@ cc_library(
         "compiler/{oneapi_version}/lib/libintlc.so.5".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/lib/libsvml.so".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/lib/libirng.so".format(oneapi_version = ONEAPI_VERSION),
-         "compiler/{oneapi_version}/lib/libmpi.so.12".format(oneapi_version = ONEAPI_VERSION),
+        "compiler/{oneapi_version}/lib/libmpi.so.12".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/lib/libOpenCL.so*".format(oneapi_version = ONEAPI_VERSION),
         "{oneapi_version}/lib/libumf.so*".format(oneapi_version = ONEAPI_VERSION),
         "{oneapi_version}/lib/libhwloc.so.15".format(oneapi_version = ONEAPI_VERSION),
