@@ -56,7 +56,7 @@ REDIST_DICT = {
         ],
         "ubuntu_25.04_2026.0": [
             "https://d3q76yfpnzmnjx.cloudfront.net/ze_loader_libs_2026.tar.gz",
-            "a0d2b6589c488fc8167e4265a9ea8d7b299711905db2033b7c0afeb2317651c9",
+            "e405e4b52842a659a46b47de464838e687368fc8620b14bffcab7d9f232b4b3f",
             "",
         ],
     },
