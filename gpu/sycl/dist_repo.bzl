@@ -50,9 +50,9 @@ def _get_dist_key(ctx):
     oneapi_version = _get_oneapi_version(ctx)
     os_id = _get_os(ctx)
     if not oneapi_version:
-        oneapi_version = "2026.0"
+        oneapi_version = "2025.1"
     if not os_id:
-        os_id = "ubuntu_25.04"
+        os_id = "ubuntu_24.10"
 
     return "{}_{}".format(os_id, oneapi_version)
 
@@ -85,7 +85,7 @@ def _use_downloaded_archive(ctx):
 
     _download_distribution(ctx, dist)
 
-    if ctx.name.endswith("level_zero"):
+    if ctx.attr.is_level_zero:
         _handle_level_zero(ctx)
 
     build_template = ctx.attr.build_templates[dist_key]
@@ -105,5 +105,6 @@ dist_repo = repository_rule(
     attrs = {
         "distrs": attr.string_list_dict(mandatory = True),
         "build_templates": attr.string_dict(mandatory = True),
+        "is_level_zero": attr.bool(default = False),
     },
 )
