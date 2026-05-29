@@ -30,6 +30,8 @@
 # sycl_toolkit_path: /opt/intel/oneapi/compiler/2025.2
 # sycl_version_number: 80000
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 load(
     "@rules_ml_toolchain//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl",
     "cc_toolchain_import",
@@ -46,35 +48,35 @@ package(
     ],
 )
 
-ONEAPI_VERSION = "2026.0"
-CLANG_VERSION = "22"
+ONEAPI_VERSION = "2025.1"
+CLANG_VERSION = "20"
 
 filegroup(
     name = "all",
     srcs = glob([
-            "advisor/2025.4/**",
-            "ccl/2022.0/**",
+            "advisor/2021.15/**",
+            "ccl/2021.15/**",
             "common/{oneapi_version}/**".format(oneapi_version = ONEAPI_VERSION),
             "compiler/{oneapi_version}/**".format(oneapi_version = ONEAPI_VERSION),
-            "dal/2025.10/env/**",
-            "dal/2025.10/etc/**",
-            "dal/2025.10/include/**",
-            "dal/2025.10/lib/libone*",
-            "dal/2025.10/lib/pkgconfig/**",
-            "dal/2025.10/share/**",
+            "dal/2025.5/env/**",
+            "dal/2025.5/etc/**",
+            "dal/2025.5/include/**",
+            "dal/2025.5/lib/libone*",
+            "dal/2025.5/lib/pkgconfig/**",
+            "dal/2025.5/share/**",
             "dev-utilities/**",
             "dnnl/**",
             "dpcpp-ct/**",
             "dpl/**",
             "installer/**",
-            "ipp/2026.0/env/**",
-            "ipp/2026.0/etc/**",
-            "ipp/2026.0/include/**",
-            "ipp/2026.0/lib/lib*",
-            "ipp/2026.0/lib/nonpic/**",
-            "ipp/2026.0/lib/pkgconfig/**",
-            "ipp/2026.0/opt/**",
-            "ipp/2026.0/share/**",
+            "ipp/2022.1/env/**",
+            "ipp/2022.1/etc/**",
+            "ipp/2022.1/include/**",
+            "ipp/2022.1/lib/lib*",
+            "ipp/2022.1/lib/nonpic/**",
+            "ipp/2022.1/lib/pkgconfig/**",
+            "ipp/2022.1/opt/**",
+            "ipp/2022.1/share/**",
             "ippcp/{oneapi_version}/env/**".format(oneapi_version = ONEAPI_VERSION),
             "ippcp/{oneapi_version}/etc/**".format(oneapi_version = ONEAPI_VERSION),
             "ippcp/{oneapi_version}/include/**".format(oneapi_version = ONEAPI_VERSION),
@@ -90,27 +92,26 @@ filegroup(
             "mkl/{oneapi_version}/lib/lib*".format(oneapi_version = ONEAPI_VERSION),
             "mkl/{oneapi_version}/lib/pkgconfig/**".format(oneapi_version = ONEAPI_VERSION),
             "mkl/{oneapi_version}/share/**".format(oneapi_version = ONEAPI_VERSION),
-            "mpi/2021.18/bin/**",
-            "mpi/2021.18/env/**",
-            "mpi/2021.18/etc/**",
-            "mpi/2021.18/include/**",
-            "mpi/2021.18/lib/lib*",
-            "mpi/2021.18/lib/mpi/**",
-            "mpi/2021.18/lib/pkgconfig/**",
-            "mpi/2021.18/opt/**",
-            "mpi/2021.18/share/**",
-            "pti/0.13/**",
-            "tbb/2023.0/env/**",
-            "tbb/2023.0/etc/**",
-            "tbb/2023.0/include/**",
-            "tbb/2023.0/lib/lib*",
-            "tbb/2023.0/lib/pkgconfig/**",
-            "tbb/2023.0/share/**",
-            "tcm/1.5/**",
-            "umf/1.1/**",
-            "vtune/2026.0/**",
-        ]
-    ),
+            "mpi/2021.15/bin/**",
+            "mpi/2021.15/env/**",
+            "mpi/2021.15/etc/**",
+            "mpi/2021.15/include/**",
+            "mpi/2021.15/lib/lib*",
+            "mpi/2021.15/lib/mpi/**",
+            "mpi/2021.15/lib/pkgconfig/**",
+            "mpi/2021.15/opt/**",
+            "mpi/2021.15/share/**",
+            "pti/0.12/**",
+            "tbb/2022.1/env/**",
+            "tbb/2022.1/etc/**",
+            "tbb/2022.1/include/**",
+            "tbb/2022.1/lib/lib*",
+            "tbb/2022.1/lib/pkgconfig/**",
+            "tbb/2022.1/share/**",
+            "tcm/1.3/**",
+            "umf/0.10/**",
+            "vtune/2025.3/**",
+        ], allow_empty = True),
 )
 
 oneapi_feature(
@@ -122,7 +123,7 @@ oneapi_feature(
     ],
     icpx_path = ":compiler/{oneapi_version}/bin/icpx".format(oneapi_version = ONEAPI_VERSION),
     clang_path = ":compiler/{oneapi_version}/bin/compiler/clang".format(oneapi_version = ONEAPI_VERSION),
-    version = "2026.0",
+    version = "2025.1",
     verbose = True
 )
 
@@ -239,7 +240,7 @@ cc_toolchain_import(
     hdrs = glob([
         "compiler/{oneapi_version}/lib/clang/{clang_version}/include/**"
             .format(oneapi_version = ONEAPI_VERSION, clang_version = CLANG_VERSION),
-    ]),
+    ], allow_empty = True),
     includes = [
         "compiler/{oneapi_version}/lib/clang/{clang_version}"
             .format(oneapi_version = ONEAPI_VERSION, clang_version = CLANG_VERSION),
@@ -270,7 +271,7 @@ cc_toolchain_import(
     name = "includes_sycl",
     hdrs = glob([
         "compiler/{oneapi_version}/include/**".format(oneapi_version = ONEAPI_VERSION),
-    ]),
+    ], allow_empty = True),
     includes = [
         "compiler/{oneapi_version}/include".format(oneapi_version = ONEAPI_VERSION),
     ],
@@ -290,7 +291,7 @@ cc_toolchain_import(
     name = "core",
     additional_libs = glob([
         "compiler/{oneapi_version}/lib/*".format(oneapi_version = ONEAPI_VERSION),
-    ]),
+    ], allow_empty = True),
     visibility = ["//visibility:public"],
 )
 
@@ -311,7 +312,7 @@ cc_library(
         "mkl/{oneapi_version}/include/**".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/include/**".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/opt/compiler/include/**".format(oneapi_version = ONEAPI_VERSION),
-    ]),
+    ], allow_empty = True),
     includes = [
         "mkl/{oneapi_version}/include".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/include".format(oneapi_version = ONEAPI_VERSION),
@@ -323,15 +324,15 @@ cc_library(
 cc_library(
     name = "libs",
     srcs = glob([
-        "compiler/{oneapi_version}/lib/libsycl.so.9".format(oneapi_version = ONEAPI_VERSION),
+        "compiler/{oneapi_version}/lib/libsycl.so.8".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/lib/libirc.so".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/lib/libur_loader.so.0".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/lib/libimf.so".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/lib/libintlc.so.5".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/lib/libsvml.so".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/lib/libirng.so".format(oneapi_version = ONEAPI_VERSION),
-        "compiler/{oneapi_version}/lib/libmpi.so.12".format(oneapi_version = ONEAPI_VERSION),
         "compiler/{oneapi_version}/lib/libOpenCL.so*".format(oneapi_version = ONEAPI_VERSION),
+        "compiler/{oneapi_version}/lib/libmpi.so*".format(oneapi_version = ONEAPI_VERSION),
         "{oneapi_version}/lib/libumf.so*".format(oneapi_version = ONEAPI_VERSION),
         "{oneapi_version}/lib/libhwloc.so.15".format(oneapi_version = ONEAPI_VERSION),
         "{oneapi_version}/lib/libur_loader.so*".format(oneapi_version = ONEAPI_VERSION),
@@ -348,8 +349,12 @@ cc_library(
         "mkl/{oneapi_version}/lib/libmkl_sycl_sparse.so*".format(oneapi_version = ONEAPI_VERSION),
         "mkl/{oneapi_version}/lib/libmkl_sycl_rng.so*".format(oneapi_version = ONEAPI_VERSION),
         "mkl/{oneapi_version}/lib/libmkl_sycl_blas.so*".format(oneapi_version = ONEAPI_VERSION),
-    ]),
-    linkopts = ["-Wl,-Bstatic,-lsvml,-lirng,-limf,-lirc,-lirc_s,-Bdynamic"],
+   ],
+        allow_empty = True,
+    ),
+    linkopts = [
+        "-Wl,-Bstatic,-lsvml,-lirng,-limf,-lirc,-lirc_s,-Bdynamic",
+    ],
     linkstatic = 1,
     visibility = ["//visibility:public"],
 )
