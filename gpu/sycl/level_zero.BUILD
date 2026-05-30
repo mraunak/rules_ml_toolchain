@@ -43,10 +43,9 @@ filegroup(
 cc_library(
     name = "headers",
     hdrs = glob([
-        "level_zero/**/*",
+        "include/**/*.h",
     ], allow_empty = True),
-    includes = [
-        ".",
-    ],
+    strip_include_prefix = "include",
+    include_prefix = "level_zero",
     visibility = ["//visibility:public"],
 )
