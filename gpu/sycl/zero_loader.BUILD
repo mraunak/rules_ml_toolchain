@@ -54,8 +54,6 @@ cc_library(
     srcs = glob([
         "lib/libze_loader.so*",
         "lib/liblevel_zero_utils.a",
-        "lib/libze_null.so*",
-        "lib/libze_tracing_layer.so*",
     ], allow_empty = True),
     data = ([
         "lib/libze_loader.so.1",
