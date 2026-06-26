@@ -56,32 +56,20 @@ filegroup(
 )
 
 filegroup(
-    name = "toolchain_data",
-    srcs = glob([
-        "%{rocm_root}/bin/hipcc",
-        "%{rocm_root}/lib/llvm/**",
-        "%{rocm_root}/llvm/bin/*",
-        "%{rocm_root}/lib/llvm/lib/clang/**/include/**",
-        "%{rocm_root}/lib/llvm/lib/clang/**/lib/**/*.a",
-        "%{rocm_root}/lib/llvm/lib/clang/**/lib/**/*.bc",
-        "%{rocm_root}/llvm/lib/clang/*/include/**",
-        "%{rocm_root}/share/hip/**",
-        "%{rocm_root}/amdgcn/**",
-        "%{rocm_root}/lib/rocm_sysdeps/lib/*.so*",
-        "%{rocm_root}/llvm/lib/*.so*",
-    ], allow_empty = True),
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
     name = "all_files",
     srcs = glob(["%{rocm_root}/**"], allow_empty = True),
     visibility = ["//visibility:public"],
 )
 
-filegroup(
+alias(
+    name = "toolchain_data",
+    actual = "%{toolchain_data_target}",
+    visibility = ["//visibility:public"],
+)
+
+alias(
     name = "rocm_root",
-    srcs = [":all_files"],
+    actual = "%{rocm_root_target}",
     visibility = ["//visibility:public"],
 )
 
