@@ -34,6 +34,7 @@ load(
 
 def _enable_rocm(repository_ctx):
     """Returns whether to build with ROCm support."""
+
     # Check TF_NEED_ROCM environment variable
     # rocm_dist is always provided (mandatory), but we only use it if TF_NEED_ROCM=1
     enable_rocm = repository_ctx.os.environ.get("TF_NEED_ROCM")
@@ -43,6 +44,7 @@ def _enable_rocm(repository_ctx):
 
 _TF_ROCM_AMDGPU_TARGETS = "TF_ROCM_AMDGPU_TARGETS"
 _TF_ROCM_CONFIG_REPO = "TF_ROCM_CONFIG_REPO"
+
 # Removed: _TF_ROCM_MULTIPLE_PATHS and _LLVM_PATH - only hermetic builds supported
 _DISTRIBUTION_PATH = "rocm/rocm_dist"
 
@@ -74,17 +76,17 @@ def _amdgpu_targets(repository_ctx, rocm_toolkit_path, bash_bin):
             auto_configure_fail("Invalid AMDGPU target: %s" % amdgpu_target)
     return amdgpu_targets
 
-def find_rocm_config(repository_ctx, rocm_path):
+def find_rocm_config(repository_ctx):
     """Returns ROCm config dictionary from running find_rocm_config.py"""
     python_bin = get_python_bin(repository_ctx)
-    exec_result = execute(repository_ctx, [python_bin, repository_ctx.attr._find_rocm_config], env_vars = {"ROCM_PATH": rocm_path})
+    exec_result = execute(repository_ctx, [python_bin, repository_ctx.attr._find_rocm_config], env_vars = {"ROCM_PATH": _DISTRIBUTION_PATH})
     if exec_result.return_code:
         auto_configure_fail("Failed to run find_rocm_config.py: %s" % err_out(exec_result))
 
     # Parse the dict from stdout.
     return dict([tuple(x.split(": ")) for x in exec_result.stdout.splitlines()])
 
-def _get_rocm_config(repository_ctx, bash_bin, rocm_path, install_path, rocm_lib_paths = None):
+def _get_rocm_config(repository_ctx, bash_bin, install_path):
     """Detects and returns information about the ROCm installation on the system.
 
     Args:
@@ -92,34 +94,29 @@ def _get_rocm_config(repository_ctx, bash_bin, rocm_path, install_path, rocm_lib
       bash_bin: the path to the path interpreter
       rocm_path: Path to ROCm installation.
       install_path: Original install path (for non-hermetic builds).
-      rocm_lib_paths: Optional list of lib paths (for multiple ROCm paths setup).
 
     Returns:
       A struct containing the following fields:
         rocm_toolkit_path: The ROCm toolkit installation directory.
         amdgpu_targets: A list of the system's AMDGPU targets.
         rocm_version_number: The version of ROCm on the system.
-        miopen_version_number: The version of MIOpen on the system.
         hipruntime_version_number: The version of HIP Runtime on the system.
         clang_version: The clang version in ROCm's LLVM.
         install_path: Original install path.
         rocm_lib_paths: List of lib paths (for multiple paths setup).
     """
-    config = find_rocm_config(repository_ctx, rocm_path)
+    config = find_rocm_config(repository_ctx)
     rocm_toolkit_path = config["rocm_toolkit_path"]
     rocm_version_number = config["rocm_version_number"]
-    miopen_version_number = config["miopen_version_number"]
     hipruntime_version_number = config["hipruntime_version_number"]
     clang_version = config.get("clang_version", "")
     return struct(
         amdgpu_targets = _amdgpu_targets(repository_ctx, rocm_toolkit_path, bash_bin),
         rocm_toolkit_path = rocm_toolkit_path,
         rocm_version_number = rocm_version_number,
-        miopen_version_number = miopen_version_number,
         hipruntime_version_number = hipruntime_version_number,
         clang_version = clang_version,
         install_path = install_path,
-        rocm_lib_paths = rocm_lib_paths if rocm_lib_paths else [],
     )
 
 def _tpl_path(repository_ctx, labelname):
@@ -184,7 +181,8 @@ def _setup_rocm_distro_dir(repository_ctx):
 
     repository_ctx.symlink(rocm_dist_path, _DISTRIBUTION_PATH)
 
-    rocm_config_with_source = _get_rocm_config(repository_ctx, bash_bin, _DISTRIBUTION_PATH, "")
+    rocm_config_with_source = _get_rocm_config(repository_ctx, bash_bin, "")
+
     # Add source repo to config as a custom field - merge the struct fields
     # Filter out built-in methods (to_json, to_proto)
     config_dict = {k: getattr(rocm_config_with_source, k) for k in dir(rocm_config_with_source) if not k.startswith("to_")}
@@ -193,18 +191,16 @@ def _setup_rocm_distro_dir(repository_ctx):
 
 def _create_dummy_repository(repository_ctx):
     """Creates a stub ROCm repository when ROCm is not enabled."""
+
     # Create stub repository using templates with empty values
     repository_ctx.file("rocm/empty/.keep", "")
     stub_dict = {
         "%{rocm_root}": "empty",
         "%{rocm_gpu_architectures}": "[]",
         "%{rocm_version_number}": "0",
-        "%{miopen_version_number}": "0",
         "%{hipruntime_version_number}": "0",
         "%{hipcc_path}": "",
-        "%{rocm_path}": "",
         "%{clang_version}": "",
-        "%{rocm_lib_paths}": "[]",
     }
 
     _tpl(repository_ctx, "rocm:BUILD", stub_dict)
@@ -214,7 +210,6 @@ def _setup_rocm_repository(repository_ctx):
     """Sets up the ROCm repository when ROCm is enabled."""
     rocm_config = _setup_rocm_distro_dir(repository_ctx)
     rocm_version_number = int(rocm_config.rocm_version_number)
-    miopen_version_number = int(rocm_config.miopen_version_number)
     hipruntime_version_number = int(rocm_config.hipruntime_version_number)
 
     # Handle hermetic vs non-hermetic ROCm
@@ -237,25 +232,14 @@ def _setup_rocm_repository(repository_ctx):
     # Get source repository (always set since we only support hermetic builds)
     rocm_source_repo = rocm_config.rocm_source_repo
 
-    # Since we symlink the ROCm distribution into this repository,
-    # we point the aliases to local filegroups instead of external repositories
-    # This avoids visibility issues in bzlmod where external repos aren't visible
-    rocm_root_target = ":rocm_redist"
-    toolchain_target = ":rocm_redist"
-
     repository_dict = {
         "%{rocm_root}": rocm_toolkit_path,
         "%{rocm_source_repo}": rocm_source_repo,
-        "%{toolchain_data_target}": toolchain_target,
-        "%{rocm_root_target}": rocm_root_target,
         "%{rocm_gpu_architectures}": str(rocm_config.amdgpu_targets),
         "%{rocm_version_number}": str(rocm_version_number),
-        "%{miopen_version_number}": str(miopen_version_number),
         "%{hipruntime_version_number}": str(hipruntime_version_number),
         "%{hipcc_path}": hipcc_path_relative,
-        "%{rocm_path}": rocm_path_relative,
         "%{clang_version}": rocm_config.clang_version,
-        "%{rocm_lib_paths}": str(rocm_config.rocm_lib_paths),
     }
 
     _tpl(repository_ctx, "rocm:BUILD", repository_dict)
