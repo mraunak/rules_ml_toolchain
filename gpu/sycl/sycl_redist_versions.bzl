@@ -35,7 +35,7 @@ REDIST_DICT = {
             "1d8633ef69020ecb8f495979c56c6a9db0a3d1343a0697863dcf7fba097a369b",
             "oneapi",
         ],
-         "ubuntu_25.10_2026.0": [
+        "ubuntu_25.10_2026.0": [
             "https://d3q76yfpnzmnjx.cloudfront.net/intel-oneapi-base-toolkit-2026.0.0.tar.gz",
             "1d8633ef69020ecb8f495979c56c6a9db0a3d1343a0697863dcf7fba097a369b",
             "oneapi",
@@ -56,7 +56,7 @@ REDIST_DICT = {
             "https://d3q76yfpnzmnjx.cloudfront.net/level-zero-1.28.6.tar.gz",
             "61658892532486018206f74c8839152dfba27b863e5f4edfcba6d8478ac71ad3",
             "level-zero-1.28.6",
-    ],
+        ],
     },
     "zero_loader": {
         "ubuntu_24.10_2025.1": [
@@ -73,6 +73,7 @@ REDIST_DICT = {
             "https://d3q76yfpnzmnjx.cloudfront.net/ze_loader_libs_1.28.tar.gz",
             "18c53a79a3aad7264410806f8277459f21485351870495996e3d7b2bf1f188fd",
             "",
+        ],
     },
 }
 
