@@ -37,7 +37,7 @@ REDIST_DICT = {
         ],
         "ubuntu_25.10_2026.0": [
             "https://d3q76yfpnzmnjx.cloudfront.net/intel-oneapi-base-toolkit-2026.0.0.tar.gz",
-            "1d8633ef69020ecb8f495979c56c6a9db0a3d1343a0697863dcf7fba097a369b",
+            "0e37f30390d9ae168b0777fa469122af1ebafd04b82cd7301983eeaad7f5848b",
             "oneapi",
         ],
     },
