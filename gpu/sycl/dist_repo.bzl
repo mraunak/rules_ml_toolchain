@@ -50,9 +50,11 @@ def _get_dist_key(ctx):
     oneapi_version = _get_oneapi_version(ctx)
     os_id = _get_os(ctx)
     if not oneapi_version:
-        oneapi_version = "2025.1"
+        oneapi_version = "2026.1"
     if not os_id:
-        os_id = "ubuntu_24.10"
+        # 2025.1 is redistributed for ubuntu_24.10 only (level_zero and
+        # zero_loader); 2026.x is redistributed for ubuntu_24.04.
+        os_id = "ubuntu_24.10" if oneapi_version == "2025.1" else "ubuntu_24.04"
 
     return "{}_{}".format(os_id, oneapi_version)
 
