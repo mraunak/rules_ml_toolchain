@@ -55,9 +55,19 @@ def if_sycl_build_is_configured(if_true, if_false = []):
       return if_true
     return if_false
 
-def sycl_library(copts = [], linkopts = [], tags = [], deps = [], **kwargs):
-    """Wrapper over cc_library which adds default SYCL options."""
-    cc_library(copts = sycl_default_copts() + copts,
+def sycl_library(copts = [], linkopts = [], tags = [], deps = [], device_code = True, **kwargs):
+    """Wrapper over cc_library which adds default SYCL options.
+
+    Args:
+      device_code: whether the sources contain SYCL device code (kernels, or
+        instantiations of templates that launch kernels). Set to False for
+        targets that only use the SYCL runtime API (queues, USM, events, interop,
+        oneDNN/oneMKL calls): they keep the SYCL headers and libraries but are
+        compiled as plain host code, skipping the device compilation passes.
+        A target with kernels built with device_code = False compiles, but fails
+        at runtime with "No kernel named ... was found".
+    """
+    cc_library(copts = (sycl_default_copts() if device_code else []) + copts,
                       linkopts = sycl_default_linkopts() + linkopts,
                       tags = tags + ["gpu"],
                       deps = deps + if_sycl_is_configured([
