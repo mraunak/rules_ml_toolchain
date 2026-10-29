@@ -18,6 +18,7 @@
 # ==============================================================================
 
 load("@rules_cc//cc:defs.bzl", "cc_toolchain")
+load("//cc/config:constants.bzl", "LIBCXX_FLAGS")
 load("//third_party/rules_cc_toolchain:toolchain_config.bzl", "cc_toolchain_config")
 load("//third_party/rules_cc_toolchain/features:cc_toolchain_import.bzl", "cc_toolchain_import")
 load("//third_party/rules_cc_toolchain/features:features.bzl", "cc_toolchain_import_feature")
@@ -70,14 +71,30 @@ cc_toolchain_import_feature(
     toolchain_import = ":startup_libs",
 )
 
+alias(
+    name = "std_incs",
+    actual = select({
+        "//common:is_stdlib_libcxx": "@llvm_linux_x86_64//:std_incs",
+        "//conditions:default": "@sysroot_linux_x86_64//:std_incs",
+    }),
+)
+
+alias(
+    name = "std_libs",
+    actual = select({
+        "//common:is_stdlib_libcxx": "@llvm_linux_x86_64//:std_libs",
+        "//conditions:default": "@sysroot_linux_x86_64//:std_libs",
+    }),
+)
+
 # buildifier: leave-alone
 cc_toolchain_import(
     name = "imports",
     deps = [
-        "@sysroot_linux_x86_64//:std_incs",
+        ":std_incs",
         "@oneapi//:compiler_incs",
         "@sysroot_linux_x86_64//:sys_incs",
-        "@sysroot_linux_x86_64//:std_libs",
+        ":std_libs",
         "@sysroot_linux_x86_64//:sys_libs",
         "@oneapi//:core",
         "@oneapi//:libclang_rt",
@@ -87,6 +104,10 @@ cc_toolchain_import(
 cc_toolchain_import_feature(
     name = "imports_feature",
     enabled = True,
+    static_link_flags = select({
+        "//common:is_static_libcxx": LIBCXX_FLAGS,
+        "//conditions:default": [],
+    }),
     toolchain_import = ":imports",
 )
 
@@ -197,7 +218,10 @@ cc_toolchain_config(
         "//cc/features:supports_start_end_lib_feature",
         "//cc/impls/linux_x86_64_linux_x86_64_sycl/features:no_as_needed",
         "//cc/impls/linux_x86_64_linux_x86_64_sycl/features:runtime_library_search_directories",
-    ],
+    ] + select({
+        "//common:is_stdlib_libcxx": ["//cc/features:libc++"],
+        "//conditions:default": [],
+    }),
     linker = "@oneapi//:ld",
     target_cpu = "x86_64",
     target_system_name = "local",

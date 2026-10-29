@@ -75,7 +75,20 @@ def system(cmd):
   else:
     return -os.WTERMSIG(ret)
 
+# The toolchain passes a static library (e.g. libc++ with
+# //common:static_libcxx=true) as one flag, "-Wl,-Bstatic -lc++ -Wl,-Bdynamic".
+# The link path below quotes each flag and drops duplicates, which would turn
+# that into a single bogus linker argument, or lose the repeated -Bstatic and
+# -Bdynamic markers. Rewrite it to the equivalent single flag -l:libc++.a.
+_STATIC_LIB_FLAG = re.compile(r"-Wl,-Bstatic\s+-l(\S+)\s+-Wl,-Bdynamic")
+
+
+def static_libs_to_archives(text):
+  return _STATIC_LIB_FLAG.sub(lambda m: "-l:lib{}.a".format(m.group(1)), text)
+
+
 def call_compiler(argv, link = False, sycl_compile = True):
+  argv = [static_libs_to_archives(a) for a in argv]
   parser = ArgumentParser()
   parser.add_argument('-c', nargs=1, action='append')
   parser.add_argument('-o', nargs=1, action='append')
@@ -178,9 +191,9 @@ def call_compiler(argv, link = False, sycl_compile = True):
     for s in flags:
         if s.startswith("@") and os.path.isfile(s[1:]):
             with open(s[1:], "r") as f:
-                expanded_flags += shlex.split(f.read())
+                expanded_flags += shlex.split(static_libs_to_archives(f.read()))
         else:
-            expanded_flags.append(s)
+            expanded_flags.append(static_libs_to_archives(s))
     # Step 2: Deduplicate flags while tracking whether we are inside
     # a --whole-archive / --no-whole-archive region.
     ordered_flags = []
